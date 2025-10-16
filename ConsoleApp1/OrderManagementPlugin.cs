@@ -1,0 +1,98 @@
+using System;
+using System.Text.Json;
+namespace day1
+{
+using System;
+using System.Text.Json;
+using Microsoft.SemanticKernel;
+using System.ComponentModel;
+
+public class OrderManagementPlugin
+{
+    [KernelFunction]
+    [Description("Retrieves the order status by order ID.")]
+    public string GetOrderStatus(
+        [Description("The ID of the order to retrieve the status for.")]
+        string orderId)
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+        {
+            return "訂單編號不可為空";
+        }
+        if (DataStore.Orders.TryGetValue(orderId, out var order))
+        {
+            return JsonSerializer.Serialize(order);
+        }
+        else
+        {
+            return "查無此訂單";
+        }
+    }
+
+    [KernelFunction]
+    [Description("處理退換貨申請")]
+    public string ProcessRefundRequest(
+        [Description("訂單編號")] string orderId,
+        [Description("退換貨原因")] string reason)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(reason))
+        {
+            return "訂單編號和退換貨原因不可為空";
+        }
+        if (DataStore.Orders.TryGetValue(orderId, out var order))
+        {
+            var refundRequest = new
+            {
+                refundId = $"REF-{DateTime.Now:yyyyMMddHHmmss}",
+                orderId = orderId,
+                reason = reason,
+                status = "已受理",
+                requestTime = DateTime.Now
+            };
+            return $"退換貨申請已受理：{JsonSerializer.Serialize(refundRequest)}";
+        }
+        else
+        {
+            return "查無此訂單，無法處理退換貨申請";
+        }
+    }
+
+    [KernelFunction]
+    [Description("複合條件查詢訂單，可同時依多個欄位篩選並回傳多筆結果")]
+    public string QueryOrders([Description("訂單查詢條件物件")] OrderQueryRequest request)
+    {
+        var results = new List<Order>();
+        foreach (var obj in DataStore.Orders.Values)
+        {
+            var order = obj as Order;
+            if (order == null) continue;
+            bool match = true;
+            if (request.OrderIds != null && request.OrderIds.Length > 0 && !request.OrderIds.Contains(order.OrderId)) match = false;
+            if (request.CustomerNames != null && request.CustomerNames.Length > 0 && !request.CustomerNames.Contains(order.CustomerName)) match = false;
+            if (request.Statuses != null && request.Statuses.Length > 0 && !request.Statuses.Contains(order.Status)) match = false;
+            if (request.StartDate.HasValue && order.Date < request.StartDate.Value) match = false;
+            if (request.EndDate.HasValue && order.Date > request.EndDate.Value) match = false;
+            if (request.RefundReasons != null && request.RefundReasons.Length > 0 && !request.RefundReasons.Contains(order.RefundReason)) match = false;
+            if (match) results.Add(order);
+        }
+        return results.Count > 0 ? JsonSerializer.Serialize(results) : "查無符合條件的訂單";
+    }
+}
+
+public class OrderQueryRequest
+{
+    [Description("訂單編號，可多筆查詢")]
+    public string[]? OrderIds { get; set; }
+    [Description("客戶名稱，可多筆查詢")]
+    public string[]? CustomerNames { get; set; }
+    [Description("訂單狀態，可多筆查詢")]
+    public string[]? Statuses { get; set; }
+    [Description("查詢日期起")]
+    public DateTime? StartDate { get; set; }
+    [Description("查詢日期迄")]
+    public DateTime? EndDate { get; set; }
+    [Description("退換貨原因，可多筆查詢")]
+    public string[]? RefundReasons { get; set; }
+    }
+
+    } // namespace day1

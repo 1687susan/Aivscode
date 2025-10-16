@@ -1,0 +1,547 @@
+﻿
+using Microsoft.SemanticKerne        Console.Write(config.UI.MainMenu.InputPrompt);
+        
+        var input = Console.ReadLine();
+        // 🔧 強力清理輸入：移除所有空白字符和控制字符
+        var choice = input?.Trim().Replace("\r", "").Replace("\n", "").Replace(" ", "");
+        
+        // 📋 【流程步驟 2】：根據使用者選擇，調用對應的 Agent Manager 方法g Microsoft.SemanticKernel.ChatCompletion;
+using System.ComponentModel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+
+namespace day1;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        // 🧪 檢查是否為測試模式
+        if (args.Length > 0 && args[0] == "--test")
+        {
+            await TestProgram.TestMain(args);
+            return;
+        }
+
+        // 📋 【流程步驟 1】：載入配置並顯示主選單
+        var config = ConfigManager.LoadConfig();
+        
+        Console.Clear();
+        Console.WriteLine(config.UI.MainMenu.Title);
+        Console.WriteLine(config.UI.MainMenu.SelectService);
+        foreach (var option in config.UI.MainMenu.Options)
+        {
+            Console.WriteLine($"{option.Key}. {option.Value}");
+        }
+        Console.Write(config.UI.MainMenu.InputPrompt);
+        
+        var choice = Console.ReadLine()?.Trim();
+        
+        // � 除錯輸出 (測試用)
+        Console.WriteLine($"[DEBUG] 使用者輸入: '{choice}' (長度: {choice?.Length ?? 0})");
+        
+        // �📋 【流程步驟 2】：根據使用者選擇，調用對應的 Agent Manager 方法
+        switch (choice)
+        {
+            case "1":
+                Console.WriteLine(config.UI.Agents.CustomerService.StartMessage);
+                await AgentManager.RunAgent(AgentType.CustomerService, config);
+                break;
+            case "2":
+                Console.WriteLine(config.UI.Agents.WeatherService.StartMessage);
+                await AgentManager.RunAgent(AgentType.WeatherService, config);
+                break;
+            case "3":
+                Console.WriteLine(config.UI.Agents.HRManagement.StartMessage);
+                await AgentManager.RunAgent(AgentType.HRManagement, config);
+                break;
+            case "4":
+                Console.WriteLine(config.UI.Agents.OrderManagement.StartMessage);
+                await AgentManager.RunAgent(AgentType.OrderManagement, config);
+                break;
+            case "5":
+                Console.WriteLine($"\n{config.UI.MainMenu.GoodBye}");
+                return;
+            case "":
+                Console.WriteLine($"\n{config.UI.MainMenu.InvalidNumber}");
+                break;
+            default:
+                Console.WriteLine($"\n{string.Format(config.UI.MainMenu.InvalidOption, choice)}");
+                Console.WriteLine(config.UI.MainMenu.NumberRange);
+                break;
+        }
+    }
+}
+
+/// <summary>
+/// 🎛️ 配置管理器 - 統一管理所有文字和設定
+/// </summary>
+public static class ConfigManager
+{
+    public static AgentConfig LoadConfig()
+    {
+        var jsonString = File.ReadAllText("agent-config.json");
+        return JsonSerializer.Deserialize<AgentConfig>(jsonString) ?? new AgentConfig();
+    }
+}
+
+/// <summary>
+/// 📋 Agent 類型枚舉
+/// </summary>
+public enum AgentType
+{
+    CustomerService,
+    WeatherService,
+    HRManagement,
+    OrderManagement
+}
+
+/// <summary>
+/// ⚙️ 配置資料結構
+/// </summary>
+public class AgentConfig
+{
+    public SystemPromptsConfig SystemPrompts { get; set; } = new();
+    public UIConfig UI { get; set; } = new();
+}
+
+public class SystemPromptsConfig
+{
+    public string CustomerService { get; set; } = "";
+    public string WeatherService { get; set; } = "";
+    public string HRManagement { get; set; } = "";
+    public string OrderManagement { get; set; } = "";
+}
+
+public class UIConfig
+{
+    public MainMenuConfig MainMenu { get; set; } = new();
+    public AgentsUIConfig Agents { get; set; } = new();
+    public CommonUIConfig Common { get; set; } = new();
+}
+
+public class MainMenuConfig
+{
+    public string Title { get; set; } = "";
+    public string SelectService { get; set; } = "";
+    public Dictionary<string, string> Options { get; set; } = new();
+    public string InputPrompt { get; set; } = "";
+    public string InvalidOption { get; set; } = "";
+    public string InvalidNumber { get; set; } = "";
+    public string NumberRange { get; set; } = "";
+    public string GoodBye { get; set; } = "";
+}
+
+public class AgentsUIConfig
+{
+    public AgentUIConfig CustomerService { get; set; } = new();
+    public AgentUIConfig WeatherService { get; set; } = new();
+    public AgentUIConfig HRManagement { get; set; } = new();
+    public AgentUIConfig OrderManagement { get; set; } = new();
+}
+
+public class AgentUIConfig
+{
+    public string StartMessage { get; set; } = "";
+    public string ReadyMessage { get; set; } = "";
+    public string InputPrompt { get; set; } = "";
+}
+
+public class CommonUIConfig
+{
+    public string AssistantPrompt { get; set; } = "";
+    public string ExitCommand { get; set; } = "";
+}
+
+/// <summary>
+/// 🤖 AI Agent 管理器 - 統一管理所有 Agent 的執行
+/// </summary>
+public static class AgentManager
+{
+    /// <summary>
+    /// 🚀 統一的 Agent 啟動方法
+    /// </summary>
+    public static async Task RunAgent(AgentType agentType, AgentConfig config)
+    {
+        BaseAgent agent = agentType switch
+        {
+            AgentType.CustomerService => new CustomerServiceAgent(config),
+            AgentType.WeatherService => new WeatherServiceAgent(config),
+            AgentType.HRManagement => new HRManagementAgent(config),
+            AgentType.OrderManagement => new OrderManagementAgent(config),
+            _ => throw new ArgumentException($"未知的 Agent 類型: {agentType}")
+        };
+
+        await agent.ProcessAsync();
+    }
+}
+
+/// <summary>
+/// 🏗️ Agent 基礎類別 - 統一的 Agent 處理邏輯
+/// </summary>
+public abstract class BaseAgent
+{
+    protected readonly AgentConfig _config;
+    protected abstract AgentType AgentType { get; }
+    protected abstract string SystemPrompt { get; }
+    protected abstract AgentUIConfig UIConfig { get; }
+
+    protected BaseAgent(AgentConfig config)
+    {
+        _config = config;
+    }
+
+    /// <summary>
+    /// 🔧 配置 Kernel 的抽象方法，由子類實作具體的 Plugin 配置
+    /// </summary>
+    protected abstract void ConfigurePlugins(Kernel kernel);
+
+    /// <summary>
+    /// 🔄 統一的處理流程
+    /// </summary>
+    public async Task ProcessAsync()
+    {
+        // 🚀 【流程步驟 3.1】：建立 Kernel 並配置 OpenAI 服務
+        var kernel = Kernel.CreateBuilder()
+            .AddOpenAIChatCompletion(apiKey: Config.OpenAI_ApiKey, modelId: Config.ModelId)
+            .Build();
+
+        // 🔧 【流程步驟 3.2】：載入對應的 Plugin 工具集
+        ConfigurePlugins(kernel);
+
+        // ⚙️ 【流程步驟 3.3】：設定 Function 自動調用行為
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        };
+
+        // 💬 【流程步驟 3.4】：建立對話歷史並設定系統角色
+        var history = new ChatHistory();
+        history.AddDeveloperMessage(SystemPrompt);
+
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+
+        Console.WriteLine(UIConfig.ReadyMessage);
+        Console.Write(UIConfig.InputPrompt);
+
+        // 🔄 【流程步驟 3.5】：進入對話循環處理
+        await ProcessConversationLoop(chatService, history, settings, kernel);
+    }
+
+    /// <summary>
+    /// 💬 統一的對話循環處理
+    /// </summary>
+    private async Task ProcessConversationLoop(
+        IChatCompletionService chatService, 
+        ChatHistory history, 
+        OpenAIPromptExecutionSettings settings, 
+        Kernel kernel)
+    {
+        string? input;
+        while ((input = Console.ReadLine()) is not null)
+        {
+            if (input.Equals(_config.UI.Common.ExitCommand, StringComparison.OrdinalIgnoreCase)) 
+                break;
+
+            // 📝 加入使用者訊息到對話歷史
+            history.AddUserMessage(input);
+            
+            // 🤖 調用 LLM 進行串流回應（含自動 Function Calling）
+            var result = chatService.GetStreamingChatMessageContentsAsync(history, settings, kernel: kernel);
+
+            // 📺 即時顯示 AI 回應內容
+            string response = "";
+            bool first = true;
+            await foreach (var content in result)
+            {
+                if (content.Role.HasValue && first)
+                {
+                    Console.Write(_config.UI.Common.AssistantPrompt);
+                    first = false;
+                }
+                Console.Write(content.Content);
+                response += content.Content;
+            }
+            Console.WriteLine();
+            
+            // 💾 將 AI 回應加入對話歷史，保持上下文連續性
+            history.AddAssistantMessage(response);
+            Console.Write(UIConfig.InputPrompt);
+        }
+    }
+}
+
+/// <summary>
+/// 🔧 Plugin 管理器，用於配置不同 AI Agent 所需的工具集
+/// 【核心概念】：每個 Agent 只載入需要的 Plugin，實現職責分離
+/// </summary>
+public static class PluginManager
+{
+    /// <summary>
+    /// 🎯 客戶服務 Agent 配置：客戶查詢 + 訂單管理
+    /// </summary>
+    public static void ConfigureForCustomerService(Kernel kernel)
+    {
+        // 📞 客服專員需要：客戶資訊查詢 + 訂單相關操作
+        kernel.Plugins.AddFromType<CustomerServicePlugin>("CustomerService");
+        kernel.Plugins.AddFromType<OrderManagementPlugin>("OrderManagement");
+    }
+
+    /// <summary>
+    /// 🌤️ 天氣服務 Agent 配置：純天氣查詢功能
+    /// </summary>
+    public static void ConfigureForWeatherService(Kernel kernel)
+    {
+        // 🌡️ 天氣助手只需要天氣查詢工具
+        kernel.Plugins.AddFromType<WeatherServicePlugin>("WeatherService");
+    }
+
+    /// <summary>
+    /// 👥 人力資源 Agent 配置：員工管理相關功能
+    /// </summary>
+    public static void ConfigureForHRService(Kernel kernel)
+    {
+        // 💼 HR助手專注於員工資訊管理
+        kernel.Plugins.AddFromType<HRManagementPlugin>("HRManagement");
+    }
+
+    /// <summary>
+    /// 📦 訂單管理 Agent 配置：專業訂單處理
+    /// </summary>
+    public static void ConfigureForOrderManagement(Kernel kernel)
+    {
+        // 🛒 訂單管理專員專注於訂單相關業務
+        kernel.Plugins.AddFromType<OrderManagementPlugin>("OrderManagement");
+    }
+}
+
+/// <summary>
+/// 📦 訂單管理插件，提供查詢訂單狀態和處理退換貨申請的功能
+/// 【設計模式】：使用 KernelFunction 屬性讓 LLM 自動識別可用工具
+/// 【資料格式】：支援複雜物件結構，JSON 序列化輸出
+/// </summary>
+public class OrderManagementPlugin
+{
+    // 🗄️ 模擬的訂單資料庫（實際應用中會連接真實資料庫）
+    private readonly Dictionary<string, object> _orders = new Dictionary<string, object>
+    {
+        { "A001", new { orderId = "A001", status = "已出貨", customerName = "王小明", amount = 1500 } },
+        { "A002", new { orderId = "A002", status = "處理中", customerName = "李小華", amount = 2300 } },
+        { "A003", new { orderId = "A003", status = "已取消", customerName = "張小美", amount = 980 } },
+        { "A004", new { orderId = "A004", status = "已完成", customerName = "陳大明", amount = 3200 } }
+    };
+
+    /// <summary>
+    /// 🔍 查詢訂單狀態的方法
+    /// 【Function Calling 流程】：
+    /// 1. LLM 識別使用者想查詢訂單
+    /// 2. 自動提取訂單編號參數  
+    /// 3. 調用此方法獲取資料
+    /// 4. 回傳 JSON 格式完整訂單資訊
+    /// </summary>
+    [KernelFunction]  // 🏷️ 讓 Semantic Kernel 識別為可調用函數
+    [Description("Retrieves the order status by order ID.")]  // 📝 描述函數用途，供 LLM 理解
+    public string GetOrderStatus(
+        [Description("The ID of the order to retrieve the status for.")]  // 📝 描述參數用途
+        string orderId)
+    {
+        // ✅ 輸入驗證：確保訂單編號不為空
+        if (string.IsNullOrWhiteSpace(orderId))
+        {
+            return "訂單編號不可為空";
+        }
+        
+        // 🔎 查詢訂單資料
+        if (_orders.TryGetValue(orderId, out var order))
+        {
+            // 📄 回傳完整 JSON 格式訂單資訊
+            return JsonSerializer.Serialize(order);
+        }
+        else
+        {
+            // ❌ 訂單不存在的錯誤處理
+            return "查無此訂單";
+        }
+    }
+
+    [KernelFunction]
+    [Description("處理退換貨申請")]
+    public string ProcessRefundRequest(
+        [Description("訂單編號")] string orderId,
+        [Description("退換貨原因")] string reason)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(reason))
+        {
+            return "訂單編號和退換貨原因不可為空";
+        }
+        if (_orders.TryGetValue(orderId, out var order))
+        {
+            var refundRequest = new
+            {
+                refundId = $"REF-{DateTime.Now:yyyyMMddHHmmss}",
+                orderId = orderId,
+                reason = reason,
+                status = "已受理",
+                requestTime = DateTime.Now
+            };
+            return $"退換貨申請已受理：{JsonSerializer.Serialize(refundRequest)}";
+        }
+        else
+        {
+            return "查無此訂單，無法處理退換貨申請";
+        }
+    }
+}
+
+/// <summary>
+/// 天氣服務插件，提供查詢今日天氣的功能
+/// </summary>
+public class WeatherServicePlugin
+{
+    private static readonly Dictionary<string, int> CityTemperatures = new Dictionary<string, int>
+    {
+        { "Taipei", 28 },
+        { "Kaohsiung", 31 },
+        { "Taichung", 27 },
+        { "Tainan", 30 },
+        { "Hsinchu", 26 }
+    };
+
+    [KernelFunction]
+    [Description("Retrieves the today temperature of the city.")]
+    public async Task<int> Get_Today_Temperature(
+        [Description("The name of the city to get the temperature for.The city names in the weather data are in English")]
+        string city)
+    {
+        // 模擬非同步操作，例如從 API 獲取天氣資料
+        await Task.Delay(500); // 模擬 500ms 的網路延遲
+        if (CityTemperatures.TryGetValue(city, out int temp))
+        {
+            return temp;
+        }
+        // 模擬未知城市的溫度
+        return 25;
+    }
+}
+
+/// <summary>
+/// 客戶服務插件
+/// </summary>
+public class CustomerServicePlugin
+{
+    [KernelFunction]
+    [Description("查詢客戶資訊")]
+    public string GetCustomerInfo(
+        [Description("客戶姓名")] string customerName)
+    {
+        var customers = new Dictionary<string, object>
+        {
+            { "王小明", new { name = "王小明", phone = "0912345678", email = "wang@email.com", level = "VIP" } },
+            { "李小華", new { name = "李小華", phone = "0923456789", email = "lee@email.com", level = "一般會員" } }
+        };
+
+        if (customers.TryGetValue(customerName, out var customer))
+        {
+            return JsonSerializer.Serialize(customer);
+        }
+        return "查無此客戶資訊";
+    }
+}
+
+/// <summary>
+/// 人力資源管理插件
+/// </summary>
+public class HRManagementPlugin
+{
+    [KernelFunction]
+    [Description("查詢員工資訊")]
+    public string SearchEmployee(
+        [Description("員工姓名或部門")] string searchTerm)
+    {
+        var employees = new Dictionary<string, object>
+        {
+            { "張經理", new { name = "張經理", department = "業務部", position = "經理", phone = "02-12345678" } },
+            { "陳工程師", new { name = "陳工程師", department = "技術部", position = "工程師", phone = "02-23456789" } }
+        };
+
+        foreach (var emp in employees)
+        {
+            if (emp.Key.Contains(searchTerm))
+            {
+                return JsonSerializer.Serialize(emp.Value);
+            }
+        }
+        return "查無相關員工資訊";
+    }
+}
+
+// 🤖 具體的 Agent 實作類別 - 繼承 BaseAgent 並實作專業化配置
+
+/// <summary>
+/// � 客戶服務助手 - 處理客戶查詢和訂單相關業務
+/// </summary>
+public class CustomerServiceAgent : BaseAgent
+{
+    public CustomerServiceAgent(AgentConfig config) : base(config) { }
+
+    protected override AgentType AgentType => AgentType.CustomerService;
+    protected override string SystemPrompt => _config.SystemPrompts.CustomerService;
+    protected override AgentUIConfig UIConfig => _config.UI.Agents.CustomerService;
+
+    protected override void ConfigurePlugins(Kernel kernel)
+    {
+        PluginManager.ConfigureForCustomerService(kernel);
+    }
+}
+
+/// <summary>
+/// 🌤️ 天氣服務助手 - 專注於天氣查詢服務
+/// </summary>
+public class WeatherServiceAgent : BaseAgent
+{
+    public WeatherServiceAgent(AgentConfig config) : base(config) { }
+
+    protected override AgentType AgentType => AgentType.WeatherService;
+    protected override string SystemPrompt => _config.SystemPrompts.WeatherService;
+    protected override AgentUIConfig UIConfig => _config.UI.Agents.WeatherService;
+
+    protected override void ConfigurePlugins(Kernel kernel)
+    {
+        PluginManager.ConfigureForWeatherService(kernel);
+    }
+}
+
+/// <summary>
+/// 👥 人力資源助手 - 專注於員工管理和HR服務
+/// </summary>
+public class HRManagementAgent : BaseAgent
+{
+    public HRManagementAgent(AgentConfig config) : base(config) { }
+
+    protected override AgentType AgentType => AgentType.HRManagement;
+    protected override string SystemPrompt => _config.SystemPrompts.HRManagement;
+    protected override AgentUIConfig UIConfig => _config.UI.Agents.HRManagement;
+
+    protected override void ConfigurePlugins(Kernel kernel)
+    {
+        PluginManager.ConfigureForHRService(kernel);
+    }
+}
+
+/// <summary>
+/// 📦 訂單管理助手 - 專業的訂單處理服務
+/// </summary>
+public class OrderManagementAgent : BaseAgent
+{
+    public OrderManagementAgent(AgentConfig config) : base(config) { }
+
+    protected override AgentType AgentType => AgentType.OrderManagement;
+    protected override string SystemPrompt => _config.SystemPrompts.OrderManagement;
+    protected override AgentUIConfig UIConfig => _config.UI.Agents.OrderManagement;
+
+    protected override void ConfigurePlugins(Kernel kernel)
+    {
+        PluginManager.ConfigureForOrderManagement(kernel);
+    }
+}
