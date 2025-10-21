@@ -52,11 +52,29 @@ namespace day1
         public string BaseUrl { get; set; } = "https://api.openai.com/v1/";
     }
 
+    public class FunctionChoiceConfig
+    {
+        public string DefaultStrategy { get; set; } = "Smart";
+        public bool EnableIntelligentStrategy { get; set; } = true;
+        public bool EnableDebugInfo { get; set; } = true;
+        public Dictionary<string, string> AgentStrategies { get; set; } = new();
+        public ScenarioStrategiesConfig ScenarioStrategies { get; set; } = new();
+    }
+
+    public class ScenarioStrategiesConfig
+    {
+        public List<string> QueryKeywords { get; set; } = new();
+        public List<string> ExplanationKeywords { get; set; } = new();
+        public bool ForceRequired { get; set; } = true;
+        public bool ForceNone { get; set; } = true;
+    }
+
     public static class AppSettings
     {
         public static string AIProvider { get; private set; } = "AzureOpenAI";
         public static AzureOpenAIConfig AzureOpenAI { get; private set; } = new();
         public static OpenAIConfig OpenAI { get; private set; } = new();
+        public static FunctionChoiceConfig FunctionChoice { get; private set; } = new();
         static AppSettings()
         {
             var path = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
@@ -108,6 +126,14 @@ namespace day1
                 Console.WriteLine($"[Debug] OpenAI 模型: {OpenAI.Model}");
             }
             
+            // 讀取 Function Choice 設定
+            if (doc.RootElement.TryGetProperty("FunctionChoice", out var functionChoice))
+            {
+                FunctionChoice = System.Text.Json.JsonSerializer.Deserialize<FunctionChoiceConfig>(functionChoice.GetRawText()) ?? new();
+                Console.WriteLine($"[Debug] Function Choice 預設策略: {FunctionChoice.DefaultStrategy}");
+                Console.WriteLine($"[Debug] 智能策略啟用: {FunctionChoice.EnableIntelligentStrategy}");
+            }
+            
             Console.WriteLine($"[Debug] 當前使用的 AI 提供者: {AIProvider}");
         }
     }
@@ -148,6 +174,7 @@ namespace day1
         public AgentUIConfig WeatherService { get; set; } = new();
         public AgentUIConfig HRManagement { get; set; } = new();
         public AgentUIConfig OrderManagement { get; set; } = new();
+        public AgentUIConfig OpenAIAssistant { get; set; } = new();
     }
 
     // 單一代理人 UI 設定
@@ -172,7 +199,8 @@ namespace day1
         CustomerService,
         WeatherService,
         HRManagement,
-        OrderManagement
+        OrderManagement,
+        OpenAIAssistant
     }
 
     // AI 執行計劃
@@ -416,10 +444,109 @@ namespace day1
                     AgentType.WeatherService => new WeatherServiceAgent(config),
                     AgentType.HRManagement => new HRManagementAgent(config),
                     AgentType.OrderManagement => new OrderManagementAgent(config),
+                    AgentType.OpenAIAssistant => throw new ArgumentException("OpenAI Assistant should use RunOpenAIAssistantAgent method"),
                     _ => throw new ArgumentException($"未知的 Agent 類型: {agentType}")
                 };
 
                 return await agent.ProcessAsync();
+            }
+
+            public static async Task<bool> RunOpenAIAssistantAgent(AgentConfig config)
+            {
+                try
+                {
+                    // Get OpenAI API key from config
+                    var apiKey = AppSettings.OpenAI.ApiKey;
+                    if (string.IsNullOrEmpty(apiKey) || apiKey.Contains("把您的真實API Key貼在這裡"))
+                    {
+                        Console.WriteLine("❌ OpenAI API 金鑰未設定或為示例值");
+                        Console.WriteLine("📝 請在 appsettings.json 中設定您的 OpenAI API 金鑰");
+                        Console.WriteLine("💡 範例格式: \"ApiKey\": \"sk-proj-您的真實API金鑰\"");
+                        Console.WriteLine("\n🔄 目前改用模擬回應模式...");
+                        
+                        // Use simulation mode
+                        await RunSimulatedAssistantAsync(config);
+                        return true;
+                    }
+
+                    using var assistantAgent = new OpenAIAssistantAgent(apiKey, config);
+                    return await assistantAgent.ProcessAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ OpenAI Assistant Agent 執行錯誤: {ex.Message}");
+                    Console.WriteLine("🔄 切換到模擬模式...");
+                    await RunSimulatedAssistantAsync(config);
+                    return true;
+                }
+            }
+
+            private static async Task RunSimulatedAssistantAsync(AgentConfig config)
+            {
+                Console.WriteLine("\n🤖 模擬 Assistant 已啟動 (無需 API 金鑰)");
+                Console.WriteLine("💭 支援的查詢類型:");
+                Console.WriteLine("   • 員工資料查詢 (如: 顯示員工資料)");
+                Console.WriteLine("   • 天氣查詢 (如: 台北天氣)");
+                Console.WriteLine("   • 客戶服務 (如: 客戶問題)");
+                Console.WriteLine("   • 訂單管理 (如: 查詢訂單)");
+                Console.WriteLine("輸入 'menu' 回主選單");
+                
+                Console.Write("\nAssistant > ");
+                string? input;
+                while ((input = Console.ReadLine()) is not null)
+                {
+                    if (input.Equals("menu", StringComparison.OrdinalIgnoreCase))
+                        return;
+                        
+                    if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    // Simple simulation responses
+                    var response = GenerateSimulatedResponse(input);
+                    Console.WriteLine($"\n🤖 Assistant: {response}\n");
+                    Console.Write("Assistant > ");
+                }
+            }
+
+            private static string GenerateSimulatedResponse(string input)
+            {
+                var lowerInput = input.ToLower();
+                
+                if (lowerInput.Contains("員工") || lowerInput.Contains("hr"))
+                {
+                    return @"📋 員工資料查詢結果 (模擬):
+🔹 張小明 - 工程師 - 台北辦公室
+🔹 李小華 - 設計師 - 新北辦公室  
+🔹 王小美 - 專案經理 - 台北辦公室
+📊 總計 3 位員工";
+                }
+                
+                if (lowerInput.Contains("天氣") || lowerInput.Contains("weather"))
+                {
+                    return @"🌤️ 天氣查詢結果 (模擬):
+📍 台北市: 25°C, 多雲
+📍 新北市: 23°C, 小雨
+🕐 更新時間: " + DateTime.Now.ToString("HH:mm");
+                }
+                
+                if (lowerInput.Contains("客戶") || lowerInput.Contains("customer"))
+                {
+                    return @"👥 客戶服務回應 (模擬):
+✅ 已為您查詢相關資訊
+📞 如需進一步協助，請聯繫客服專線
+📧 或發送郵件至客服信箱";
+                }
+                
+                if (lowerInput.Contains("訂單") || lowerInput.Contains("order"))
+                {
+                    return @"📦 訂單查詢結果 (模擬):
+🔸 訂單 #12345 - 處理中
+🔸 訂單 #12346 - 已出貨
+🔸 訂單 #12347 - 已完成
+📊 總計 3 筆訂單";
+                }
+                
+                return $"💭 已收到您的查詢: \"{input}\"\n🔄 這是模擬回應，實際功能需要設定 OpenAI API 金鑰";
             }
         }
 
@@ -437,6 +564,11 @@ namespace day1
             }
 
             protected abstract void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel);
+
+            /// <summary>
+            /// 獲取代理人類型，用於 FunctionChoiceBehavior 策略選擇
+            /// </summary>
+            protected virtual AgentType GetAgentType() => AgentType;
 
             // 顯示對話歷史的方法
             private void ShowChatHistory(Microsoft.SemanticKernel.ChatCompletion.ChatHistory history)
@@ -474,11 +606,19 @@ namespace day1
 
                 ConfigurePlugins(kernel);
 
-                var settings = new Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings
-                {
-                    // 注釋：自動函數呼叫功能可能在這個版本中不可用
-                    // FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-                };
+                // 獲取可用函數列表用於智能策略判斷
+                var availableFunctions = kernel.Plugins
+                    .SelectMany(plugin => plugin.Select(function => $"{plugin.Name}.{function.Name}"))
+                    .ToList();
+
+                // 使用 FunctionChoiceBehaviorManager 創建最佳化設定
+                var settings = FunctionChoiceBehaviorManager.CreateOptimizedSettings(
+                    GetAgentType(), 
+                    userInput: null, 
+                    availableFunctions: availableFunctions
+                );
+
+                Console.WriteLine($"[Info] 🎯 使用函數選擇策略: {FunctionChoiceBehaviorManager.GetStrategyDescription(FunctionChoiceBehaviorManager.GetRecommendedStrategy(GetAgentType()))}");
 
                 var history = new Microsoft.SemanticKernel.ChatCompletion.ChatHistory();
                 history.AddDeveloperMessage(SystemPrompt);
@@ -487,6 +627,8 @@ namespace day1
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("[Debug] 初始化對話歷史:");
                 Console.WriteLine($"系統提示: {SystemPrompt}");
+                Console.WriteLine($"可用函數數量: {availableFunctions.Count}");
+                Console.WriteLine($"可用函數: {string.Join(", ", availableFunctions)}");
                 Console.ResetColor();
 
                 var chatService = kernel.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
@@ -494,14 +636,15 @@ namespace day1
                 Console.WriteLine(UIConfig.ReadyMessage);
                 Console.Write(UIConfig.InputPrompt);
 
-                return await ProcessConversationLoop(chatService, history, settings, kernel);
+                return await ProcessConversationLoop(chatService, history, settings, kernel, availableFunctions);
             }
 
             private async Task<bool> ProcessConversationLoop(
                 Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService chatService,
                 Microsoft.SemanticKernel.ChatCompletion.ChatHistory history,
                 Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings settings,
-                Microsoft.SemanticKernel.Kernel kernel)
+                Microsoft.SemanticKernel.Kernel kernel,
+                List<string> availableFunctions)
             {
                 string? input;
                 while ((input = Console.ReadLine()) is not null)
@@ -534,7 +677,16 @@ namespace day1
 
                     history.AddUserMessage(input);
 
-                    var result = chatService.GetStreamingChatMessageContentsAsync(history, settings, kernel: kernel);
+                    // 🎯 根據用戶輸入動態調整 Function Choice Behavior 策略
+                    var dynamicSettings = FunctionChoiceBehaviorManager.CreateOptimizedSettings(
+                        GetAgentType(), 
+                        userInput: input, 
+                        availableFunctions: availableFunctions
+                    );
+
+                    Console.WriteLine($"[Info] 🧠 智能策略判斷: {FunctionChoiceBehaviorManager.GetStrategyDescription(FunctionChoiceBehaviorManager.GetStrategyForScenario(input))}");
+
+                    var result = chatService.GetStreamingChatMessageContentsAsync(history, dynamicSettings, kernel: kernel);
 
                     string response = "";
                     bool first = true;
@@ -594,10 +746,8 @@ namespace day1
                     {
                         Console.WriteLine($"{option.Key}. {option.Value}");
                     }
-                    Console.WriteLine("6. 🤖 AI 智能模式 (讓 AI 分析需求並自動選擇代理人)");
                     
                     Console.Write("請輸入選項 (1-6): ");
-
                     var input = Console.ReadLine();
                     var choice = input?.Trim() ?? "";
                     
@@ -608,29 +758,17 @@ namespace day1
                     }
 
                     // 檢查是否為退出命令
-                    if (choice == "5" || choice.ToLower() == "exit")
+                    if (choice == "6" || choice.ToLower() == "exit")
                     {
                         Console.WriteLine($"\n{config.UI.MainMenu.GoodBye}");
                         return;
                     }
 
-                    // 檢查是否為 AI 智能模式
-                    if (choice == "6" || choice.ToLower() == "ai")
-                    {
-                        bool aiModeResult = await MenuHelper.HandleAIMode(config);
-                        if (!aiModeResult)
-                        {
-                            Console.WriteLine($"\n{config.UI.MainMenu.GoodBye}");
-                            return;
-                        }
-                        continue;
-                    }
-                    
                     // 解析單選選項
-                    if (!int.TryParse(choice, out int selectedOption) || selectedOption < 1 || selectedOption > 4)
+                    if (!int.TryParse(choice, out int selectedOption) || selectedOption < 1 || selectedOption > 5)
                     {
                         Console.WriteLine($"\n⚠️ 無效的選項：'{choice}'");
-                        Console.WriteLine("請輸入 1-4 之間的數字。");
+                        Console.WriteLine("請輸入 1-5 之間的數字 (6=退出)。");
                         continue;
                     }
 
@@ -740,6 +878,49 @@ namespace day1
         // 工具類別：選單處理工具
         public static class MenuHelper
         {
+            // AI 智能助手模式處理 - 包含子選單循環
+            public static async Task<bool> HandleAIAssistantMode(AgentConfig config)
+            {
+                while (true)
+                {
+                    Console.WriteLine("\n🎯 AI 智能助手模式");
+                    Console.WriteLine("💡 功能選項：");
+                    Console.WriteLine("   1️⃣ 直接對話 - 使用 OpenAI Assistant API");
+                    Console.WriteLine("   2️⃣ 智能分析 - 自動選擇最適合的專業代理人");
+                    Console.WriteLine("   3️⃣ 回到主選單");
+                    Console.Write("\n請選擇模式 (1-3): ");
+                    
+                    var aiChoice = Console.ReadLine()?.Trim();
+                    bool shouldContinue = false;
+                    
+                    switch (aiChoice)
+                    {
+                        case "1":
+                            shouldContinue = await AgentManager.RunOpenAIAssistantAgent(config);
+                            break;
+                        case "2":
+                            shouldContinue = await HandleAIMode(config);
+                            break;
+                        case "3":
+                            return true; // 回到主選單
+                        default:
+                            Console.WriteLine("❌ 請輸入有效選項 (1-3)");
+                            continue;
+                    }
+                    
+                    // 如果子功能返回 true，表示要回到主選單
+                    if (shouldContinue)
+                    {
+                        Console.WriteLine("\n🔄 返回 AI 智能助手模式選單...");
+                        continue; // 繼續顯示 AI 智能助手模式選單
+                    }
+                    else
+                    {
+                        return false; // 退出整個程式
+                    }
+                }
+            }
+
             // AI 智能模式處理
             public static async Task<bool> HandleAIMode(AgentConfig config)
             {
@@ -835,7 +1016,6 @@ namespace day1
                 Console.WriteLine("🤖 AI 正在整合所有相關資料並生成完整回應...");
                 Console.WriteLine($"📋 需要調用 {plan.Steps.Count} 個專業模組的資料");
                 
-                var allResults = new List<string>();
                 var kernel = KernelFactory.CreateKernel();
 
                 // 收集所有需要的代理人類型，避免重複配置
@@ -863,43 +1043,77 @@ namespace day1
                     }
                 }
 
-                // 構建整合系統提示
-                var integratedPrompt = $@"
-你是一個整合型 AI 助理，具備客戶服務、訂單管理、天氣預報、人力資源等多項專業能力。
-請根據用戶需求，直接調用相關功能並提供完整、專業的回應。
+                // 獲取所有可用函數用於智能策略判斷和調試
+                var availableFunctions = kernel.Plugins
+                    .SelectMany(plugin => plugin.Select(function => $"{plugin.Name}.{function.Name}"))
+                    .ToList();
+
+                Console.WriteLine($"[Debug] 🔧 已載入的函數: {string.Join(", ", availableFunctions)}");
+
+                // 構建更明確的整合系統提示
+                var integratedPrompt = $@"你是一個整合型 AI 助理，具備客戶服務、訂單管理、天氣預報、人力資源等多項專業能力。
+你必須根據用戶需求，主動調用相關的函數工具來獲取最新的真實資料。
 
 用戶需求：{userRequest}
 
-請提供詳細且實用的回應，包含所有相關資訊。如果需要查詢具體資料，請主動調用相應的功能。
+重要指示：
+1. 對於天氣查詢（台北、高雄、台中、台南等）：必須調用 QueryWeather 函數獲取真實天氣資料
+2. 對於員工查詢（顯示員工、查詢員工等）：必須調用 QueryEmployees 函數獲取真實員工資料  
+3. 對於客戶查詢：必須調用 GetCustomerInfo 或 QueryCustomers 函數獲取真實客戶資料
+4. 對於訂單查詢：必須調用 GetOrderStatus 或 QueryOrders 函數獲取真實訂單資料
+
+請務必先調用相關函數獲取資料，然後基於實際資料提供完整、專業的回應。
+如果沒有調用函數就回應，那是錯誤的行為。
 使用繁體中文回應，格式要清晰易讀。";
 
                 var chatHistory = new Microsoft.SemanticKernel.ChatCompletion.ChatHistory();
                 chatHistory.AddSystemMessage(integratedPrompt);
                 chatHistory.AddUserMessage(userRequest);
 
-                var settings = new Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings
+                // 🎯 強制使用 Required 策略確保函數調用
+                var settings = new OpenAIPromptExecutionSettings
                 {
-                    // 注釋：自動函數呼叫功能可能在這個版本中不可用
-                    // FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+                    MaxTokens = 2000,
+                    Temperature = 0.7f,
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.Required() // 強制調用函數
                 };
+
+                Console.WriteLine($"[Info] 🧠 整合模式策略: ⚡ 必需調用 - 強制調用函數獲取數據");
+                Console.WriteLine($"[Info] 💡 可用函數總數: {availableFunctions.Count} 個");
 
                 var chatService = kernel.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
                 
                 Console.WriteLine("\n" + new string('=', 80));
                 Console.WriteLine("🎯 AI 整合回應結果：");
                 Console.WriteLine(new string('=', 80));
-                
-                // 使用流式回應以提供更好的用戶體驗
-                var result = chatService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel: kernel);
-                
-                string fullResponse = "";
-                await foreach (var content in result)
+
+                try
                 {
-                    if (content.Content != null)
+                    // 使用非流式回應以便更好地處理函數調用
+                    var response = await chatService.GetChatMessageContentAsync(chatHistory, settings, kernel);
+                    
+                    Console.WriteLine($"[Debug] 📤 模型回應: {response.Content}");
+                    Console.WriteLine(response.Content);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ 整合回應執行錯誤: {ex.Message}");
+                    Console.WriteLine($"[Debug] 錯誤詳情: {ex}");
+                    
+                    // 備用：使用流式回應
+                    Console.WriteLine("\n🔄 嘗試使用備用回應方式...");
+                    var fallbackResult = chatService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel: kernel);
+                    
+                    string fallbackResponse = "";
+                    await foreach (var content in fallbackResult)
                     {
-                        Console.Write(content.Content);
-                        fullResponse += content.Content;
+                        if (content.Content != null)
+                        {
+                            Console.Write(content.Content);
+                            fallbackResponse += content.Content;
+                        }
                     }
+                    Console.WriteLine($"\n[Debug] 📤 備用回應: {fallbackResponse}");
                 }
                 
                 Console.WriteLine();
@@ -930,11 +1144,13 @@ namespace day1
             private static async Task<bool> HandleFollowUpQuestions(Microsoft.SemanticKernel.Kernel kernel, Microsoft.SemanticKernel.ChatCompletion.ChatHistory chatHistory, AgentConfig config)
             {
                 var chatService = kernel.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
-                var settings = new Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings
-                {
-                    // 注釋：自動函數呼叫功能可能在這個版本中不可用
-                    // FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-                };
+                
+                // 獲取所有可用函數用於智能策略判斷
+                var availableFunctions = kernel.Plugins
+                    .SelectMany(plugin => plugin.Select(function => $"{plugin.Name}.{function.Name}"))
+                    .ToList();
+
+                Console.WriteLine($"[Info] 💡 後續對話模式啟用，可用函數: {availableFunctions.Count} 個");
                 
                 Console.WriteLine("\n💬 繼續對話模式（輸入 'back' 返回選項，'menu' 返回主選單）:");
                 
@@ -960,8 +1176,17 @@ namespace day1
                     
                     chatHistory.AddUserMessage(input);
                     
-                    Console.Write("🤖 AI: ");
-                    var result = chatService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel: kernel);
+                    // 🎯 根據每個後續問題動態調整 Function Choice Behavior
+                    var dynamicSettings = FunctionChoiceBehaviorManager.CreateOptimizedSettings(
+                        AgentType.CustomerService, // 預設使用客戶服務策略，因為是綜合模式
+                        userInput: input, 
+                        availableFunctions: availableFunctions
+                    );
+
+                    Console.WriteLine($"[Info] � 使用策略: {FunctionChoiceBehaviorManager.GetStrategyForScenario(input).ToString()}");
+                    
+                    Console.Write("�🤖 AI: ");
+                    var result = chatService.GetStreamingChatMessageContentsAsync(chatHistory, dynamicSettings, kernel: kernel);
                     
                     string response = "";
                     await foreach (var content in result)
@@ -1069,6 +1294,7 @@ namespace day1
                     AgentType.WeatherService => "天氣預報專員",
                     AgentType.HRManagement => "人力資源專員",
                     AgentType.OrderManagement => "訂單管理專員",
+                    AgentType.OpenAIAssistant => "OpenAI Assistant 整合專員",
                     _ => "未知代理人"
                 };
             }
@@ -1082,6 +1308,7 @@ namespace day1
                     AgentType.WeatherService => config.UI.Agents.WeatherService,
                     AgentType.HRManagement => config.UI.Agents.HRManagement,
                     AgentType.OrderManagement => config.UI.Agents.OrderManagement,
+                    AgentType.OpenAIAssistant => config.UI.Agents.OpenAIAssistant,
                     _ => new AgentUIConfig()
                 };
             }
@@ -1121,6 +1348,10 @@ namespace day1
                     case 4:
                         Console.WriteLine(config.UI.Agents.OrderManagement.StartMessage);
                         backToMenu = await AgentManager.RunAgent(AgentType.OrderManagement, config);
+                        break;
+                    case 5:
+                        Console.WriteLine(config.UI.Agents.OpenAIAssistant.StartMessage);
+                        backToMenu = await MenuHelper.HandleAIAssistantMode(config);
                         break;
                     default:
                         Console.WriteLine($"❌ 無效的選項: {agentOption}");
@@ -1301,6 +1532,10 @@ namespace day1
                         case 4:
                             Console.WriteLine(config.UI.Agents.OrderManagement.StartMessage);
                             backToMenu = await AgentManager.RunAgent(AgentType.OrderManagement, config);
+                            break;
+                        case 5:
+                            Console.WriteLine(config.UI.Agents.OpenAIAssistant.StartMessage);
+                            backToMenu = await AgentManager.RunOpenAIAssistantAgent(config);
                             break;
                         default:
                             Console.WriteLine($"❌ 無效的選項: {option}，跳過此代理人");

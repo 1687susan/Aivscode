@@ -10,7 +10,11 @@
 <ItemGroup>
     <!-- 核心套件：Semantic Kernel -->
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.65.*" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.65.*" />
+  <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.65.*" />
+  <!-- OpenAI client for Assistant API and stdio integration (match SK expected version) -->
+  <PackageReference Include="OpenAI" Version="2.4.*" />
+  <!-- Semantic Kernel OpenAPI plugin (useful for wrapping Assistant tools) -->
+  <PackageReference Include="Microsoft.SemanticKernel.Plugins.OpenApi" Version="1.65.*" />
     
     <!-- Web API & Entity Framework 套件 -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

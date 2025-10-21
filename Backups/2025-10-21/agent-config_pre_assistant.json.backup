@@ -1,0 +1,56 @@
+{
+  "SystemPrompts": {
+    "CustomerService": "你是一個專業的客戶服務助手，可以查詢客戶資訊、訂單狀態和處理退換貨申請。請使用繁體中文回應。\n\n如果使用者詢問與客戶服務無關的問題（如天氣查詢、人力資源管理、訂單管理等），請禮貌地告知：'這個問題超出我的專業範圍，建議您輸入 menu 回到主選單，選擇對應的專業助手：\n- 選項2：天氣服務助手\n- 選項3：人力資源助手\n- 選項4：訂單管理助手'",
+    "WeatherService": "你是一個天氣查詢助手，可以查詢台灣各城市的溫度。請使用繁體中文回應。\n\n如果使用者詢問與天氣無關的問題（如客戶服務、人力資源管理、訂單管理等），請禮貌地告知：'這個問題超出我的專業範圍，建議您輸入 menu 回到主選單，選擇對應的專業助手：\n- 選項1：客戶服務助手\n- 選項3：人力資源助手\n- 選項4：訂單管理助手'",
+    "HRManagement": "你是一個人力資源助手，可以查詢員工資訊和提供HR管理建議。請使用繁體中文回應。\n\n如果使用者詢問與人力資源無關的問題（如客戶服務、天氣查詢、訂單管理等），請禮貌地告知：'這個問題超出我的專業範圍，建議您輸入 menu 回到主選單，選擇對應的專業助手：\n- 選項1：客戶服務助手\n- 選項2：天氣服務助手\n- 選項4：訂單管理助手'",
+    "OrderManagement": "你是一個專業的訂單管理助手，可以查詢訂單狀態和處理退換貨申請。請使用繁體中文回應。\n\n如果使用者詢問與訂單管理無關的問題（如客戶服務、天氣查詢、人力資源管理等），請禮貌地告知：'這個問題超出我的專業範圍，建議您輸入 menu 回到主選單，選擇對應的專業助手：\n- 選項1：客戶服務助手\n- 選項2：天氣服務助手\n- 選項3：人力資源助手'"
+  },
+  "UI": {
+    "MainMenu": {
+      "Title": "=== AI Agent 智能系統 ===",
+      "SelectService": "請選擇要執行的服務：",
+      "Options": {
+        "1": "客戶服務助手 - 客戶資訊查詢、訂單處理、退換貨",
+        "2": "天氣服務助手 - 台灣各城市天氣查詢", 
+        "3": "人力資源助手 - 員工搜尋、HR管理建議",
+        "4": "訂單管理助手 - 專業訂單查詢與處理",
+        "5": "退出程式"
+      },
+      "InputPrompt": "請輸入選項 (1-6): ",
+      "InvalidOption": "⚠️ 無效的選項：'{0}'",
+      "InvalidNumber": "⚠️ 請輸入有效的選項數字。",
+      "NumberRange": "請輸入 1-6 之間的數字。",
+      "ExecutionOrderPrompt": "您選擇了多個代理人，請指定執行順序：",
+      "ExecutionOrderInput": "請輸入執行順序 (例如: 1,2,3): ",
+      "InvalidExecutionOrder": "⚠️ 執行順序格式錯誤，將按原始順序執行。",
+      "GoodBye": "謝謝使用 AI Agent 系統，再見！"
+    },
+    "Agents": {
+      "CustomerService": {
+        "StartMessage": "\n啟動客戶服務助手...",
+        "ReadyMessage": "客戶服務助手已啟動，輸入 'exit' 結束程式，'menu' 回主選單，'history' 查看對話歷史",
+        "InputPrompt": "Customer > "
+      },
+      "WeatherService": {
+        "StartMessage": "\n啟動天氣服務助手...",
+        "ReadyMessage": "天氣服務助手已啟動，輸入 'exit' 結束程式，'menu' 回主選單，'history' 查看對話歷史",
+        "InputPrompt": "User > "
+      },
+      "HRManagement": {
+        "StartMessage": "\n啟動人力資源助手...",
+        "ReadyMessage": "人力資源助手已啟動，輸入 'exit' 結束程式，'menu' 回主選單，'history' 查看對話歷史",
+        "InputPrompt": "HR > "
+      },
+      "OrderManagement": {
+        "StartMessage": "\n啟動訂單管理助手...",
+        "ReadyMessage": "訂單管理助手已啟動，輸入 'exit' 結束程式，'menu' 回主選單，'history' 查看對話歷史",
+        "InputPrompt": "Order > "
+      }
+    },
+    "Common": {
+      "AssistantPrompt": "Assistant > ",
+      "ExitCommand": "exit",
+      "BackToMenuCommand": "menu"
+    }
+  }
+}

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj": {}
+    "C:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj": {}
   },
   "projects": {
-    "c:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj": {
+    "C:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj",
+        "projectUniqueName": "C:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj",
         "projectName": "ConsoleApp1",
-        "projectPath": "c:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj",
+        "projectPath": "C:\\Users\\user\\Aivscode\\ConsoleApp1\\ConsoleApp1.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\user\\Aivscode\\ConsoleApp1\\obj\\",
+        "outputPath": "C:\\Users\\user\\Aivscode\\ConsoleApp1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -79,9 +79,17 @@
               "target": "Package",
               "version": "[1.65.*, )"
             },
+            "Microsoft.SemanticKernel.Plugins.OpenApi": {
+              "target": "Package",
+              "version": "[1.65.*, )"
+            },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.4, )"
+            },
+            "OpenAI": {
+              "target": "Package",
+              "version": "[2.4.*, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

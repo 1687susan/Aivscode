@@ -1,0 +1,57 @@
+﻿# ================================================
+# 檔案備份資訊
+# ================================================
+# 原始檔案: c:\Users\user\Aivscode\ConsoleApp1\DataStore.cs
+# 備份時間: 2025-10-17 10:27:58
+# 備份原因: 完成多選和順序執行功能實作
+# 檔案大小: 2577 bytes
+# ================================================
+namespace day1
+{
+    // 集中資料管理 DataStore.cs
+    using System;
+    using System.Collections.Generic;
+
+    public static class DataStore
+    {
+        public static Dictionary<string, object> Orders { get; } = new()
+        {
+            { "A001", new { orderId = "A001", status = "已出貨", customerName = "王小明", amount = 1500 } },
+            { "A002", new { orderId = "A002", status = "處理中", customerName = "李小華", amount = 2300 } },
+            { "A003", new { orderId = "A003", status = "已取消", customerName = "張小美", amount = 980 } },
+            { "A004", new { orderId = "A004", status = "已完成", customerName = "陳大明", amount = 3200 } }
+        };
+
+        public static Dictionary<string, object> Customers { get; } = new()
+        {
+            { "王小明", new { name = "王小明", phone = "0912345678", email = "wang@email.com", level = "VIP" } },
+            { "李小華", new { name = "李小華", phone = "0923456789", email = "lee@email.com", level = "一般會員" } }
+        };
+
+        public static Dictionary<string, object> Employees { get; } = new()
+        {
+            { "張經理", new { name = "張經理", department = "業務部", position = "經理", phone = "02-12345678" } },
+            { "陳工程師", new { name = "陳工程師", department = "技術部", position = "工程師", phone = "02-23456789" } },
+            { "王小明", new { name = "王小明", department = "業務部", position = "業務專員", phone = "0912-345678" } },
+            { "陳美麗", new { name = "陳美麗", department = "人力資源部", position = "人資助理", phone = "0987-654321" } },
+            { "李大偉", new { name = "李大偉", department = "資訊部", position = "工程師", phone = "0955-112233" } }
+        };
+
+        public static Dictionary<string, int> CityTemperatures { get; } = new()
+        {
+            { "Taipei", 28 },
+            { "Kaohsiung", 31 },
+            { "Taichung", 27 },
+            { "Tainan", 30 },
+            { "Hsinchu", 26 }
+        };
+
+        public static Dictionary<string, day1.Weather> WeatherData { get; } = new()
+        {
+            { "Taipei-2025-10-09", new day1.Weather { City = "Taipei", Date = "2025-10-09", Type = "Sunny" } },
+            { "Kaohsiung-2025-10-09", new day1.Weather { City = "Kaohsiung", Date = "2025-10-09", Type = "Cloudy" } },
+            { "Taichung-2025-10-09", new day1.Weather { City = "Taichung", Date = "2025-10-09", Type = "Rainy" } }
+        };
+    }
+}
+

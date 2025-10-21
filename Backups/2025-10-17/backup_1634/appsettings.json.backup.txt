@@ -1,0 +1,22 @@
+﻿# ================================================
+# 檔案備份資訊
+# ================================================
+# 原始檔案: c:\Users\user\Aivscode\ConsoleApp1\appsettings.json
+# 備份時間: 2025-10-17 16:34:09
+# 備份原因: 修復檔案結構錯誤前備份
+# 檔案大小: 452 bytes
+# ================================================
+{
+  "AzureOpenAI": {
+    "ApiKey": "AHGgR3mR38D161wYYKrtDayAOrjIUSs8gMp6TQ74CjOZfGIh8LiPJQQJ99BIACi0881XJ3w3AAABACOGiUPe",
+    "Endpoint": "https://eflowagentdev.openai.azure.com/",
+    "DeploymentName": "gpt-4.1"
+  },
+  "Database2025": {
+    "ConnectionString": "server=sql028;database=MCP_DB;User ID=twqa;Password=1234567890;TrustServerCertificate=True;",
+    "QueryTimeout": 30,
+    "EnableRetry": true,
+    "MaxRetryAttempts": 3
+  }
+}
+

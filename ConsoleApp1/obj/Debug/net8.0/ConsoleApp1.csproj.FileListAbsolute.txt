@@ -123,3 +123,15 @@ c:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\xunit.core.dll
 c:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\xunit.execution.dotnet.dll
 c:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Newtonsoft.Json.dll
 c:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\appsettings.json
+c:\Users\user\Aivscode\ConsoleApp1\obj\Debug\net8.0\ConsoleApp1.sourcelink.json
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Json.More.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\JsonPointer.Net.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\JsonSchema.Net.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Microsoft.Identity.Client.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Microsoft.Identity.Client.Extensions.Msal.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Microsoft.OpenApi.Readers.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\Microsoft.SemanticKernel.Plugins.OpenApi.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\SharpYaml.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\System.Security.Cryptography.ProtectedData.dll
+C:\Users\user\Aivscode\ConsoleApp1\bin\Debug\net8.0\runtimes\win\lib\netstandard2.0\System.Security.Cryptography.ProtectedData.dll

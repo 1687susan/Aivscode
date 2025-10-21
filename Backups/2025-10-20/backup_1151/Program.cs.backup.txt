@@ -1,0 +1,1030 @@
+﻿# ================================================
+# 檔案備份資訊
+# ================================================
+# 原始檔案: c:\Users\user\Aivscode\ConsoleApp1\Program.cs
+# 備份時間: 2025-10-20 11:51:32
+# 備份原因: Manual backup
+# 檔案大小: 47065 bytes
+# ================================================
+// 主要引用的外部檔案與用途說明：
+//
+// 1. CustomerServicePlugin.cs
+//    └ 客戶服務代理人功能（查詢客戶資訊等）
+// 2. WeatherServicePlugin.cs
+//    └ 天氣服務代理人功能（查詢天氣等）
+// 3. HRManagementPlugin.cs
+//    └ 人資管理代理人功能（查詢人員、假勤等）
+// 4. OrderManagementPlugin.cs
+//    └ 訂單管理代理人功能（查詢訂單、庫存等）
+// 5. DataStore.cs
+//    └ 資料存取層，供各 Plugin 查詢客戶、訂單、天氣、人資等資料
+// 6. agent-config.json 或 config.json
+//    └ UI 設定、代理人系統提示、主選單選項等（由 ConfigManager.LoadConfig() 載入）
+//
+// 只要在 PluginManager 註冊新 Plugin，並在 agent-config.json 增加對應 UI 設定，即可擴充新代理人。
+
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+using System.ComponentModel;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+// 本程式會呼叫以下外部檔案：
+// 1. CustomerServicePlugin.cs、OrderManagementPlugin.cs、WeatherServicePlugin.cs、HRManagementPlugin.cs
+//    └ 各代理人功能插件，提供具體查詢/管理邏輯
+// 2. DataStore.cs
+//    └ 資料存取層，供插件查詢客戶、訂單等資料
+// 3. 設定 JSON 檔案（如 config.json）
+//    └ 可由 ConfigManager.LoadConfig() 載入，決定 UI、代理人、系統提示等參數
+//
+// 若要擴充代理人或功能，請新增對應 Plugin 類別檔案，並在 PluginManager 註冊。
+
+namespace day1
+{
+    public class AzureOpenAIConfig
+    {
+        public string ApiKey { get; set; } = "";
+        public string Endpoint { get; set; } = "";
+        public string DeploymentName { get; set; } = "";
+    }
+
+    public static class AppSettings
+    {
+        public static AzureOpenAIConfig AzureOpenAI { get; private set; } = new();
+        static AppSettings()
+        {
+            var path = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+            // 如果在程式目錄找不到，嘗試在當前目錄查找
+            if (!System.IO.File.Exists(path))
+            {
+                path = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "appsettings.json");
+                if (!System.IO.File.Exists(path))
+                {
+                    // 嘗試在專案目錄查找
+                    var projectDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    for (int i = 0; i < 5 && projectDir != null; i++) // 最多往上查找5層
+                    {
+                        var testPath = System.IO.Path.Combine(projectDir, "appsettings.json");
+                        if (System.IO.File.Exists(testPath))
+                        {
+                            path = testPath;
+                            break;
+                        }
+                        projectDir = System.IO.Directory.GetParent(projectDir)?.FullName;
+                    }
+                }
+            }
+            
+            Console.WriteLine($"[Debug] 載入 appsettings.json: {path}");
+            Console.WriteLine($"[Debug] appsettings.json 存在: {System.IO.File.Exists(path)}");
+            
+            if (!System.IO.File.Exists(path)) return;
+            var json = System.IO.File.ReadAllText(path);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("AzureOpenAI", out var azureOpenAI))
+            {
+                AzureOpenAI = System.Text.Json.JsonSerializer.Deserialize<AzureOpenAIConfig>(azureOpenAI.GetRawText()) ?? new();
+                Console.WriteLine($"[Debug] AzureOpenAI 端點: {AzureOpenAI.Endpoint}");
+            }
+        }
+    }
+
+    // 代理人 UI 設定（各代理人顯示訊息）
+    public class AgentsUIConfig
+    {
+        public AgentUIConfig CustomerService { get; set; } = new();
+        public AgentUIConfig WeatherService { get; set; } = new();
+        public AgentUIConfig HRManagement { get; set; } = new();
+        public AgentUIConfig OrderManagement { get; set; } = new();
+    }
+
+    // 單一代理人 UI 設定
+    public class AgentUIConfig
+    {
+        public string StartMessage { get; set; } = "";
+        public string ReadyMessage { get; set; } = "";
+        public string InputPrompt { get; set; } = "";
+    }
+
+    // 共用 UI 設定（助理提示、離開指令）
+    public class CommonUIConfig
+    {
+        public string AssistantPrompt { get; set; } = "";
+        public string ExitCommand { get; set; } = "";
+        public string BackToMenuCommand { get; set; } = "";
+    }
+
+    // 代理人類型列舉
+    public enum AgentType
+    {
+        CustomerService,
+        WeatherService,
+        HRManagement,
+        OrderManagement
+    }
+    // 主選單 UI 設定
+    public class MainMenuConfig
+    {
+        public string Title { get; set; } = "";
+        public string SelectService { get; set; } = "";
+    [System.Text.Json.Serialization.JsonPropertyName("Options")]
+    public Dictionary<string, string> Options { get; set; } = new();
+        public string InputPrompt { get; set; } = "";
+        public string InvalidOption { get; set; } = "";
+        public string InvalidNumber { get; set; } = "";
+        public string NumberRange { get; set; } = "";
+        public string ExecutionOrderPrompt { get; set; } = "";
+        public string ExecutionOrderInput { get; set; } = "";
+        public string InvalidExecutionOrder { get; set; } = "";
+        public string GoodBye { get; set; } = "";
+    }
+
+    // 代理人組態（包含系統提示與 UI 設定）
+    public class AgentConfig
+    {
+        public SystemPromptsConfig SystemPrompts { get; set; } = new();
+        public UIConfig UI { get; set; } = new();
+    }
+
+    // 各代理人系統提示
+        public class SystemPromptsConfig
+        {
+            public string CustomerService { get; set; } = "";
+            public string WeatherService { get; set; } = "";
+            public string HRManagement { get; set; } = "";
+            public string OrderManagement { get; set; } = "";
+        }
+
+    // UI 設定（主選單、各代理人、共用）
+        public class UIConfig
+        {
+            public MainMenuConfig MainMenu { get; set; } = new();
+            public AgentsUIConfig Agents { get; set; } = new();
+            public CommonUIConfig Common { get; set; } = new();
+        }
+
+    // 組態管理（載入設定）
+        public static class ConfigManager
+        {
+            public static AgentConfig LoadConfig()
+            {
+                var path = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "agent-config.json");
+                // 如果在程式目錄找不到，嘗試在上層目錄查找
+                if (!System.IO.File.Exists(path))
+                {
+                    path = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "agent-config.json");
+                    if (!System.IO.File.Exists(path))
+                    {
+                        // 嘗試在專案目錄查找
+                        var projectDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        for (int i = 0; i < 5 && projectDir != null; i++) // 最多往上查找5層
+                        {
+                            var testPath = System.IO.Path.Combine(projectDir, "agent-config.json");
+                            if (System.IO.File.Exists(testPath))
+                            {
+                                path = testPath;
+                                break;
+                            }
+                            projectDir = System.IO.Directory.GetParent(projectDir)?.FullName;
+                        }
+                    }
+                }
+                
+                Console.WriteLine($"[Debug] 嘗試載入設定檔: {path}");
+                Console.WriteLine($"[Debug] 設定檔存在: {System.IO.File.Exists(path)}");
+                
+                if (!System.IO.File.Exists(path))
+                    return new AgentConfig();
+                var json = System.IO.File.ReadAllText(path);
+                try
+                {
+                    var config = System.Text.Json.JsonSerializer.Deserialize<AgentConfig>(json, new System.Text.Json.JsonSerializerOptions {
+                        PropertyNameCaseInsensitive = true,
+                        AllowTrailingCommas = true,
+                        ReadCommentHandling = JsonCommentHandling.Skip
+                    });
+                    return config ?? new AgentConfig();
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[反序列化錯誤] {ex.Message}");
+                    Console.ResetColor();
+                    return new AgentConfig();
+                }
+            }
+        }
+
+    // 代理人管理（執行代理人）
+        public static class AgentManager
+        {
+            public static async Task<bool> RunAgent(AgentType agentType, AgentConfig config)
+            {
+                BaseAgent agent = agentType switch
+                {
+                    AgentType.CustomerService => new CustomerServiceAgent(config),
+                    AgentType.WeatherService => new WeatherServiceAgent(config),
+                    AgentType.HRManagement => new HRManagementAgent(config),
+                    AgentType.OrderManagement => new OrderManagementAgent(config),
+                    _ => throw new ArgumentException($"未知的 Agent 類型: {agentType}")
+                };
+
+                return await agent.ProcessAsync();
+            }
+        }
+
+    // 代理人基底類別
+        public abstract class BaseAgent
+        {
+            protected readonly AgentConfig _config;
+            protected abstract AgentType AgentType { get; }
+            protected abstract string SystemPrompt { get; }
+            protected abstract AgentUIConfig UIConfig { get; }
+
+            protected BaseAgent(AgentConfig config)
+            {
+                _config = config;
+            }
+
+            protected abstract void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel);
+
+            // 顯示對話歷史的方法
+            private void ShowChatHistory(Microsoft.SemanticKernel.ChatCompletion.ChatHistory history)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\n=== 📜 對話歷史內容 ===");
+                Console.ResetColor();
+                
+                for (int i = 0; i < history.Count; i++)
+                {
+                    var message = history[i];
+                    string roleColor = message.Role.ToString() switch
+                    {
+                        "System" => "Magenta",
+                        "User" => "Green", 
+                        "Assistant" => "Blue",
+                        _ => "White"
+                    };
+                    
+                    Console.ForegroundColor = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), roleColor);
+                    Console.WriteLine($"[{i + 1}] {message.Role}: {message.Content}");
+                    Console.ResetColor();
+                    Console.WriteLine(); // 空行分隔
+                }
+                
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"總共 {history.Count} 則訊息");
+                Console.WriteLine("========================\n");
+                Console.ResetColor();
+            }
+
+            public async Task<bool> ProcessAsync()
+            {
+                var kernel = Microsoft.SemanticKernel.Kernel.CreateBuilder()
+                    .AddAzureOpenAIChatCompletion(
+                        deploymentName: AppSettings.AzureOpenAI.DeploymentName,
+                        endpoint: AppSettings.AzureOpenAI.Endpoint,
+                        apiKey: AppSettings.AzureOpenAI.ApiKey
+                    )
+                    .Build();
+
+                ConfigurePlugins(kernel);
+
+                var settings = new Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings
+                {
+                    // FunctionChoiceBehavior = Microsoft.SemanticKernel.Connectors.OpenAI.FunctionChoiceBehavior.Auto()
+                };
+
+                var history = new Microsoft.SemanticKernel.ChatCompletion.ChatHistory();
+                history.AddDeveloperMessage(SystemPrompt);
+
+                // Debug: 顯示初始化的對話歷史
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("[Debug] 初始化對話歷史:");
+                Console.WriteLine($"系統提示: {SystemPrompt}");
+                Console.ResetColor();
+
+                var chatService = kernel.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
+
+                Console.WriteLine(UIConfig.ReadyMessage);
+                Console.Write(UIConfig.InputPrompt);
+
+                return await ProcessConversationLoop(chatService, history, settings, kernel);
+            }
+
+            private async Task<bool> ProcessConversationLoop(
+                Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService chatService,
+                Microsoft.SemanticKernel.ChatCompletion.ChatHistory history,
+                Microsoft.SemanticKernel.Connectors.OpenAI.OpenAIPromptExecutionSettings settings,
+                Microsoft.SemanticKernel.Kernel kernel)
+            {
+                string? input;
+                while ((input = Console.ReadLine()) is not null)
+                {
+                    if (input.Equals(_config.UI.Common.ExitCommand, StringComparison.OrdinalIgnoreCase))
+                        return false; // 退出程式
+                    
+                    if (input.Equals(_config.UI.Common.BackToMenuCommand, StringComparison.OrdinalIgnoreCase))
+                        return true; // 回到主選單
+
+                    // 特殊指令：查看對話歷史
+                    if (input.Equals("history", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ShowChatHistory(history);
+                        Console.Write(UIConfig.InputPrompt);
+                        continue;
+                    }
+
+                    history.AddUserMessage(input);
+
+                    var result = chatService.GetStreamingChatMessageContentsAsync(history, settings, kernel: kernel);
+
+                    string response = "";
+                    bool first = true;
+                    await foreach (var content in result)
+                    {
+                        if (content.Role.HasValue && first)
+                        {
+                            Console.Write(_config.UI.Common.AssistantPrompt);
+                            first = false;
+                        }
+                        Console.Write(content.Content);
+                        response += content.Content;
+                    }
+                    Console.WriteLine();
+
+                    history.AddAssistantMessage(response);
+                    Console.Write(UIConfig.InputPrompt);
+                }
+                return false; // 正常退出（沒有輸入）
+            }
+        }
+
+    // 主程式入口
+        class Program
+        {
+            static async Task Main(string[] args)
+            {
+                if (args.Length > 0 && args[0] == "--test")
+                {
+                    await TestProgram.TestMain(args);
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[Debug] 進入 Main 方法，開始載入 config...");
+                Console.ResetColor();
+                var config = ConfigManager.LoadConfig();
+
+                if (config?.UI?.MainMenu == null || config.UI.MainMenu.Options == null || config.UI.MainMenu.Options.Count == 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[錯誤] 主選單設定載入失敗，請確認 agent-config.json 是否存在且格式正確。");
+                    Console.ResetColor();
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"[Debug] config.UI.MainMenu: {System.Text.Json.JsonSerializer.Serialize(config?.UI?.MainMenu)}");
+                    Console.WriteLine($"[Debug] Options: {System.Text.Json.JsonSerializer.Serialize(config?.UI?.MainMenu?.Options)}");
+                    Console.ResetColor();
+                    return;
+                }
+
+                // 主選單迴圈
+                while (true)
+                {
+                    // 顯示暫存的代理人狀態
+                    MenuHelper.ShowTemporaryAgents(config);
+                    
+                    Console.WriteLine("\n" + config.UI.MainMenu.Title);
+                    Console.WriteLine(config.UI.MainMenu.SelectService);
+                    foreach (var option in config.UI.MainMenu.Options)
+                    {
+                        Console.WriteLine($"{option.Key}. {option.Value}");
+                    }
+                    
+                    // 如果有暫存代理人，顯示額外選項
+                    if (MenuHelper.HasTemporaryAgents())
+                    {
+                        Console.WriteLine("6. 清空暫存的代理人");
+                    }
+                    
+                    Console.Write(config.UI.MainMenu.InputPrompt);
+
+                    var input = Console.ReadLine();
+                    var choice = input?.Trim().Replace("\r", "").Replace("\n", "").Replace("\u0000", "").Replace("\uFEFF", "");
+                    
+                    if (string.IsNullOrWhiteSpace(choice))
+                    {
+                        Console.WriteLine($"\n{config.UI.MainMenu.InvalidNumber}");
+                        continue;
+                    }
+
+                    // 檢查是否為退出命令
+                    if (choice == "5" || choice.ToLower() == "exit")
+                    {
+                        Console.WriteLine($"\n{config.UI.MainMenu.GoodBye}");
+                        return;
+                    }
+                    
+                    // 檢查是否為清空暫存命令
+                    if (choice == "6" && MenuHelper.HasTemporaryAgents())
+                    {
+                        MenuHelper.ClearTemporaryAgents();
+                        continue;
+                    }
+
+                    // 解析選項（支援單選和複選）
+                    var selectedOptions = MenuHelper.ParseSelectedOptions(choice, 4); // 1-4 是有效選項
+
+                    if (selectedOptions.Count == 0)
+                    {
+                        Console.WriteLine($"\n{string.Format(config.UI.MainMenu.InvalidOption, choice)}");
+                        Console.WriteLine(config.UI.MainMenu.NumberRange);
+                        if (MenuHelper.HasTemporaryAgents())
+                        {
+                            Console.WriteLine("或輸入 6 清空暫存的代理人");
+                        }
+                        continue;
+                    }
+
+                    // 判斷是否為首次選擇（在管理暫存代理人之前檢查）
+                    bool isFirstSelection = !MenuHelper.HasTemporaryAgents();
+                    
+                    // 使用暫存機制管理代理人選擇
+                    var finalAgentList = MenuHelper.ManageTemporaryAgents(selectedOptions, config);
+
+                    // 如果有多個代理人，詢問執行模式和順序
+                    string executionMode = "sequential";
+                    if (finalAgentList.Count > 1)
+                    {
+                        Console.WriteLine("\n請選擇執行模式：");
+                        Console.WriteLine("1. 順序執行（依序互動，可中途停止）");
+                        Console.WriteLine("2. 真正併行（同時啟動，共享控制台）");
+                        Console.Write("請選擇 (1/2，預設為1): ");
+                        var modeChoice = Console.ReadLine()?.Trim();
+                        executionMode = modeChoice switch
+                        {
+                            "2" => "parallel",
+                            _ => "sequential"
+                        };
+                        
+                        switch (executionMode)
+                        {
+                            case "sequential":
+                                Console.Write("\n是否要調整執行順序？(y/N): ");
+                                var adjustOrder = Console.ReadLine()?.Trim().ToLower();
+                                if (adjustOrder == "y" || adjustOrder == "yes")
+                                {
+                                    finalAgentList = MenuHelper.AskExecutionOrder(finalAgentList, config);
+                                }
+                                break;
+                            case "parallel":
+                                Console.WriteLine("🚀 真正併行模式：所有代理人同時啟動");
+                                Console.WriteLine("⚠️  注意：多個代理人將共享控制台輸入");
+                                break;
+                        }
+                    }
+                    
+                    // 執行選中的代理人
+                    bool backToMenu = await MenuHelper.ExecuteSelectedAgents(finalAgentList, config, isFirstSelection, executionMode);
+
+                    // 如果代理人返回 false (exit)，則退出程式
+                    if (!backToMenu)
+                    {
+                        Console.WriteLine($"\n{config.UI.MainMenu.GoodBye}");
+                        return;
+                    }
+                    // 如果返回 true (menu)，則繼續迴圈回到主選單
+                }
+            }
+        }
+
+        public static class PluginManager
+        {
+            public static void ConfigureForCustomerService(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                kernel.Plugins.AddFromObject(new CustomerServicePlugin(), "CustomerService");
+                kernel.Plugins.AddFromObject(new OrderManagementPlugin(), "OrderManagement");
+            }
+
+            public static void ConfigureForWeatherService(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                kernel.Plugins.AddFromObject(new WeatherServicePlugin(), "WeatherService");
+            }
+
+            public static void ConfigureForHRService(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                kernel.Plugins.AddFromObject(new HRManagementPlugin(), "HRManagement");
+            }
+
+            public static void ConfigureForOrderManagement(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                kernel.Plugins.AddFromObject(new OrderManagementPlugin(), "OrderManagement");
+            }
+        }
+
+
+        public class CustomerServiceAgent : BaseAgent
+        {
+            public CustomerServiceAgent(AgentConfig config) : base(config) { }
+
+            protected override AgentType AgentType => AgentType.CustomerService;
+            protected override string SystemPrompt => _config.SystemPrompts.CustomerService;
+            protected override AgentUIConfig UIConfig => _config.UI.Agents.CustomerService;
+
+            protected override void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                PluginManager.ConfigureForCustomerService(kernel);
+            }
+        }
+
+        public class WeatherServiceAgent : BaseAgent
+        {
+            public WeatherServiceAgent(AgentConfig config) : base(config) { }
+
+            protected override AgentType AgentType => AgentType.WeatherService;
+            protected override string SystemPrompt => _config.SystemPrompts.WeatherService;
+            protected override AgentUIConfig UIConfig => _config.UI.Agents.WeatherService;
+
+            protected override void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                PluginManager.ConfigureForWeatherService(kernel);
+            }
+        }
+
+        public class HRManagementAgent : BaseAgent
+        {
+            public HRManagementAgent(AgentConfig config) : base(config) { }
+
+            protected override AgentType AgentType => AgentType.HRManagement;
+            protected override string SystemPrompt => _config.SystemPrompts.HRManagement;
+            protected override AgentUIConfig UIConfig => _config.UI.Agents.HRManagement;
+
+            protected override void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                PluginManager.ConfigureForHRService(kernel);
+            }
+        }
+
+        public class OrderManagementAgent : BaseAgent
+        {
+            public OrderManagementAgent(AgentConfig config) : base(config) { }
+
+            protected override AgentType AgentType => AgentType.OrderManagement;
+            protected override string SystemPrompt => _config.SystemPrompts.OrderManagement;
+            protected override AgentUIConfig UIConfig => _config.UI.Agents.OrderManagement;
+
+            protected override void ConfigurePlugins(Microsoft.SemanticKernel.Kernel kernel)
+            {
+                PluginManager.ConfigureForOrderManagement(kernel);
+            }
+        }
+
+        // 工具類別：選單處理工具
+        public static class MenuHelper
+        {
+            // 暫存的代理人清單
+            private static List<int> _tempAgentList = new List<int>();
+            private static bool _hasTemporaryAgents = false;
+            
+            // 從配置中獲取代理人名稱
+            public static string GetAgentName(string optionKey, AgentConfig config)
+            {
+                if (config?.UI?.MainMenu?.Options != null && 
+                    config.UI.MainMenu.Options.ContainsKey(optionKey))
+                {
+                    return config.UI.MainMenu.Options[optionKey];
+                }
+                return $"選項 {optionKey}";
+            }
+            
+            // 顯示暫存的代理人清單
+            public static void ShowTemporaryAgents(AgentConfig config)
+            {
+                if (_hasTemporaryAgents && _tempAgentList.Count > 0)
+                {
+                    Console.WriteLine("\n💾 目前暫存的代理人：");
+                    for (int i = 0; i < _tempAgentList.Count; i++)
+                    {
+                        var optionKey = _tempAgentList[i].ToString();
+                        var optionName = GetAgentName(optionKey, config);
+                        Console.WriteLine($"   {i + 1}. {optionName}");
+                    }
+                    Console.WriteLine();
+                }
+            }
+            
+            // 詢問是否清空暫存代理人
+            public static bool AskToClearTemporaryAgents(List<int> newSelections, AgentConfig config)
+            {
+                if (!_hasTemporaryAgents || _tempAgentList.Count == 0)
+                    return false;
+                
+                Console.WriteLine("\n🤔 偵測到您之前已選擇了代理人：");
+                for (int i = 0; i < _tempAgentList.Count; i++)
+                {
+                    var optionKey = _tempAgentList[i].ToString();
+                    var optionName = GetAgentName(optionKey, config);
+                    Console.WriteLine($"   {i + 1}. {optionName}");
+                }
+                
+                Console.WriteLine("\n📝 您剛才選擇的代理人：");
+                for (int i = 0; i < newSelections.Count; i++)
+                {
+                    var optionKey = newSelections[i].ToString();
+                    var optionName = GetAgentName(optionKey, config);
+                    Console.WriteLine($"   {i + 1}. {optionName}");
+                }
+                
+                Console.WriteLine("\n請選擇處理方式：");
+                Console.WriteLine("1. 清空之前的代理人，只使用新選擇的代理人");
+                Console.WriteLine("2. 保留之前的代理人，將新選擇的代理人加入並優先執行");
+                Console.Write("請輸入選項 (1 或 2): ");
+                
+                var choice = Console.ReadLine()?.Trim();
+                return choice == "1";
+            }
+            
+            // 管理暫存代理人清單
+            public static List<int> ManageTemporaryAgents(List<int> newSelections, AgentConfig config)
+            {
+                // 如果有暫存代理人，詢問使用者處理方式
+                bool shouldClear = AskToClearTemporaryAgents(newSelections, config);
+                
+                if (shouldClear)
+                {
+                    // 清空並使用新選擇
+                    _tempAgentList = new List<int>(newSelections);
+                    Console.WriteLine("✅ 已清空之前的代理人，使用新選擇的代理人");
+                }
+                else if (_hasTemporaryAgents && _tempAgentList.Count > 0)
+                {
+                    // 合併代理人，新選擇優先
+                    var mergedList = new List<int>(newSelections);
+                    foreach (var agent in _tempAgentList)
+                    {
+                        if (!mergedList.Contains(agent))
+                        {
+                            mergedList.Add(agent);
+                        }
+                    }
+                    _tempAgentList = mergedList;
+                    Console.WriteLine("✅ 已將新選擇的代理人加入執行清單（新選擇優先）");
+                }
+                else
+                {
+                    // 第一次選擇
+                    _tempAgentList = new List<int>(newSelections);
+                }
+                
+                _hasTemporaryAgents = true;
+                
+                // 顯示最終的執行清單
+                Console.WriteLine("\n🔄 執行清單：");
+                for (int i = 0; i < _tempAgentList.Count; i++)
+                {
+                    var optionKey = _tempAgentList[i].ToString();
+                    var optionName = GetAgentName(optionKey, config);
+                    var isNewSelection = newSelections.Contains(_tempAgentList[i]) ? " 🆕" : "";
+                    Console.WriteLine($"{i + 1}. {optionName}{isNewSelection}");
+                }
+                
+                return new List<int>(_tempAgentList);
+            }
+            
+            // 清空暫存代理人
+            public static void ClearTemporaryAgents()
+            {
+                _tempAgentList.Clear();
+                _hasTemporaryAgents = false;
+                Console.WriteLine("✅ 已清空所有暫存的代理人");
+            }
+            
+            // 檢查是否有暫存代理人
+            public static bool HasTemporaryAgents()
+            {
+                return _hasTemporaryAgents && _tempAgentList.Count > 0;
+            }
+            
+            // 解析選項字串（支援單選和複選）
+            public static List<int> ParseSelectedOptions(string input, int maxOption = 5)
+            {
+                var selectedOptions = new List<int>();
+                if (string.IsNullOrWhiteSpace(input))
+                    return selectedOptions;
+
+                // 移除空白字元並分割
+                var parts = input.Replace(" ", "").Split(',');
+                
+                foreach (var part in parts)
+                {
+                    if (int.TryParse(part.Trim(), out int option))
+                    {
+                        if (option >= 1 && option <= maxOption && !selectedOptions.Contains(option))
+                        {
+                            selectedOptions.Add(option);
+                        }
+                    }
+                }
+                
+                return selectedOptions;
+            }
+
+            // 詢問執行順序
+            public static List<int> AskExecutionOrder(List<int> selectedOptions, AgentConfig config)
+            {
+                if (selectedOptions.Count <= 1)
+                    return selectedOptions;
+
+                Console.WriteLine($"\n{config.UI.MainMenu.ExecutionOrderPrompt}");
+                
+                // 顯示已選擇的代理人
+                for (int i = 0; i < selectedOptions.Count; i++)
+                {
+                    var optionKey = selectedOptions[i].ToString();
+                    var optionName = GetAgentName(optionKey, config);
+                    Console.WriteLine($"{i + 1}. {optionName}");
+                }
+                
+                Console.Write($"{config.UI.MainMenu.ExecutionOrderInput}");
+                var orderInput = Console.ReadLine()?.Trim();
+                
+                // 解析執行順序
+                var orderOptions = ParseSelectedOptions(orderInput ?? "", selectedOptions.Count);
+                
+                // 驗證順序是否完整且正確
+                if (orderOptions.Count == selectedOptions.Count && 
+                    orderOptions.All(o => o >= 1 && o <= selectedOptions.Count))
+                {
+                    var orderedList = new List<int>();
+                    foreach (var order in orderOptions)
+                    {
+                        orderedList.Add(selectedOptions[order - 1]);
+                    }
+                    return orderedList;
+                }
+                else
+                {
+                    Console.WriteLine($"{config.UI.MainMenu.InvalidExecutionOrder}");
+                    return selectedOptions; // 返回原始順序
+                }
+            }
+
+            // 執行指定的代理人
+            public static async Task<bool> ExecuteSelectedAgents(List<int> agentOptions, AgentConfig config, bool isFirstSelection = false, string executionMode = "sequential")
+            {
+                return executionMode switch
+                {
+                    "parallel" => await ExecuteAgentsInTrueParallel(agentOptions, config),
+                    _ => await ExecuteAgentsSequentially(agentOptions, config, isFirstSelection)
+                };
+            }
+            
+            // 順序執行代理人（原有邏輯）
+            private static async Task<bool> ExecuteAgentsSequentially(List<int> agentOptions, AgentConfig config, bool isFirstSelection)
+            {
+                int currentIndex = 0;
+                int totalAgents = agentOptions.Count;
+                
+                foreach (var option in agentOptions)
+                {
+                    currentIndex++;
+                    Console.WriteLine($"\n🚀 正在執行代理人 {option}... ({currentIndex}/{totalAgents})");
+                    
+                    bool backToMenu = true;
+                    
+                    switch (option)
+                    {
+                        case 1:
+                            Console.WriteLine(config.UI.Agents.CustomerService.StartMessage);
+                            backToMenu = await AgentManager.RunAgent(AgentType.CustomerService, config);
+                            break;
+                        case 2:
+                            Console.WriteLine(config.UI.Agents.WeatherService.StartMessage);
+                            backToMenu = await AgentManager.RunAgent(AgentType.WeatherService, config);
+                            break;
+                        case 3:
+                            Console.WriteLine(config.UI.Agents.HRManagement.StartMessage);
+                            backToMenu = await AgentManager.RunAgent(AgentType.HRManagement, config);
+                            break;
+                        case 4:
+                            Console.WriteLine(config.UI.Agents.OrderManagement.StartMessage);
+                            backToMenu = await AgentManager.RunAgent(AgentType.OrderManagement, config);
+                            break;
+                        default:
+                            Console.WriteLine($"無效的選項: {option}");
+                            continue; // 繼續下一個選項
+                    }
+                    
+                    // 處理代理人執行結果
+                    if (!backToMenu)
+                    {
+                        // 代理人返回 exit，根據是否為首次選擇決定處理方式
+                        if (currentIndex < totalAgents)
+                        {
+                            Console.WriteLine($"\n⚠️  代理人 {option} 已結束");
+                            Console.WriteLine($"還有 {totalAgents - currentIndex} 個代理人待執行：");
+                            
+                            for (int i = currentIndex; i < agentOptions.Count; i++)
+                            {
+                                var nextOptionKey = agentOptions[i].ToString();
+                                var nextOptionName = GetAgentName(nextOptionKey, config);
+                                Console.WriteLine($"   - {nextOptionName}");
+                            }
+                            
+                            if (isFirstSelection)
+                            {
+                                // 首次選擇時自動繼續執行
+                                Console.WriteLine("🔄 首次多選模式：自動繼續執行剩餘代理人...");
+                            }
+                            else
+                            {
+                                // 非首次選擇時詢問使用者
+                                Console.Write("是否繼續執行剩餘代理人？(Y/n): ");
+                                var continueChoice = Console.ReadLine()?.Trim().ToLower();
+                                
+                                if (continueChoice == "n" || continueChoice == "no")
+                                {
+                                    Console.WriteLine("📋 已停止執行剩餘代理人，回到主選單");
+                                    return true; // 回到主選單
+                                }
+                                else
+                                {
+                                    Console.WriteLine("✅ 繼續執行剩餘代理人...");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // 這是最後一個代理人，直接結束
+                            Console.WriteLine($"📋 代理人 {option} 執行完成");
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        // 代理人正常結束（返回 menu），繼續下一個
+                        Console.WriteLine($"✅ 代理人 {option} 執行完成，繼續下一個...");
+                    }
+                }
+                
+                Console.WriteLine($"🎉 所有 {totalAgents} 個代理人都執行完成！");
+                return true; // 所有代理人都執行完成，回到主選單
+            }
+            
+            // 快速模式執行代理人（連續執行）
+            private static async Task<bool> ExecuteAgentsInFastMode(List<int> agentOptions, AgentConfig config)
+            {
+                Console.WriteLine($"\n⚡ 準備快速執行 {agentOptions.Count} 個代理人...");
+                Console.WriteLine("💡 提示：代理人將連續執行，無需中途確認");
+                
+                var agentNames = new List<string>();
+                foreach (var option in agentOptions)
+                {
+                    var agentName = GetAgentName(option.ToString(), config);
+                    agentNames.Add(agentName);
+                    Console.WriteLine($"⭐ 準備啟動：{agentName}");
+                }
+                
+                Console.WriteLine("\n✨ 開始執行代理人序列...");
+                
+                var results = new List<bool>();
+                
+                for (int i = 0; i < agentOptions.Count; i++)
+                {
+                    var option = agentOptions[i];
+                    var agentName = agentNames[i];
+                    
+                    Console.WriteLine($"\n� [{i + 1}/{agentOptions.Count}] 正在執行：{agentName}");
+                    Console.WriteLine("─".PadRight(50, '─'));
+                    
+                    try
+                    {
+                        var result = await ExecuteSingleAgent(option, config);
+                        results.Add(result);
+                        
+                        var status = result ? "✅ 正常結束" : "❌ 用戶退出";
+                        Console.WriteLine($"📊 {agentName} 執行結果：{status}");
+                        
+                        if (!result) // 如果用戶選擇退出
+                        {
+                            Console.WriteLine("🚫 檢測到退出請求，停止後續代理人執行");
+                            break;
+                        }
+                        
+                        if (i < agentOptions.Count - 1) // 不是最後一個
+                        {
+                            Console.WriteLine("⏭️  準備執行下一個代理人...");
+                            await Task.Delay(1000); // 短暫延遲，讓用戶看到狀態
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ {agentName} 執行錯誤: {ex.Message}");
+                        results.Add(true); // 錯誤時視為正常結束
+                    }
+                }
+                
+                Console.WriteLine("\n🎉 快速模式執行完成！");
+                Console.WriteLine("執行結果摘要：");
+                
+                for (int i = 0; i < Math.Min(results.Count, agentNames.Count); i++)
+                {
+                    var status = results[i] ? "✅ 正常結束 (回到選單)" : "❌ 退出程式";
+                    Console.WriteLine($"  {agentNames[i]}: {status}");
+                }
+                
+                // 如果任何一個代理人返回 false (exit)，整個程式退出
+                return results.All(r => r);
+            }
+                        // 執行單一代理人（用於併行執行）
+            private static async Task<bool> ExecuteSingleAgent(int option, AgentConfig config)
+            {
+                try
+                {
+                    switch (option)
+                    {
+                        case 1:
+                            Console.WriteLine(config.UI.Agents.CustomerService.StartMessage);
+                            return await AgentManager.RunAgent(AgentType.CustomerService, config);
+                        case 2:
+                            Console.WriteLine(config.UI.Agents.WeatherService.StartMessage);
+                            return await AgentManager.RunAgent(AgentType.WeatherService, config);
+                        case 3:
+                            Console.WriteLine(config.UI.Agents.HRManagement.StartMessage);
+                            return await AgentManager.RunAgent(AgentType.HRManagement, config);
+                        case 4:
+                            Console.WriteLine(config.UI.Agents.OrderManagement.StartMessage);
+                            return await AgentManager.RunAgent(AgentType.OrderManagement, config);
+                        default:
+                            Console.WriteLine($"❌ 無效的代理人選項: {option}");
+                            return true; // 無效選項視為正常結束
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ 代理人 {option} 執行錯誤: {ex.Message}");
+                    return true; // 錯誤時視為正常結束，不影響其他代理人
+                }
+            }
+            
+            // 真正併行執行代理人（同時啟動）
+            private static async Task<bool> ExecuteAgentsInTrueParallel(List<int> agentOptions, AgentConfig config)
+            {
+                Console.WriteLine($"\n🚀 真正併行啟動 {agentOptions.Count} 個代理人...");
+                Console.WriteLine("⚠️  注意：所有代理人將同時啟動並共享控制台");
+                Console.WriteLine("💡 提示：您需要在同一控制台中與多個代理人互動");
+                Console.WriteLine("🔄 建議：完成一個代理人互動後再處理下一個");
+                
+                var tasks = new List<Task<bool>>();
+                var agentNames = new List<string>();
+                
+                foreach (var option in agentOptions)
+                {
+                    var agentName = GetAgentName(option.ToString(), config);
+                    agentNames.Add(agentName);
+                    Console.WriteLine($"⭐ 併行啟動：{agentName}");
+                    
+                    // 創建每個代理人的執行任務（真正併行）
+                    var task = Task.Run(async () => await ExecuteSingleAgent(option, config));
+                    tasks.Add(task);
+                    
+                    // 短暫延遲，避免輸出混亂
+                    await Task.Delay(500);
+                }
+                
+                Console.WriteLine("\n✨ 所有代理人已併行啟動，正在等待執行結果...");
+                Console.WriteLine("📋 請注意：輸出可能會交錯顯示");
+                
+                try
+                {
+                    // 等待所有任務完成
+                    var results = await Task.WhenAll(tasks);
+                    
+                    Console.WriteLine("\n🎉 所有併行代理人執行完成！");
+                    Console.WriteLine("執行結果摘要：");
+                    
+                    for (int i = 0; i < results.Length; i++)
+                    {
+                        var status = results[i] ? "✅ 正常結束 (回到選單)" : "❌ 退出程式";
+                        Console.WriteLine($"  {agentNames[i]}: {status}");
+                    }
+                    
+                    // 如果任何一個代理人返回 false (exit)，整個程式退出
+                    return results.All(r => r);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"\n❌ 併行執行過程中發生錯誤: {ex.Message}");
+                    return true; // 發生錯誤時回到主選單
+                }
+            }
+        }
+    }
+
+
+
+

@@ -22,11 +22,12 @@ namespace day1
 
         public static Dictionary<string, object> Employees { get; } = new()
         {
-            { "張經理", new { name = "張經理", department = "業務部", position = "經理", phone = "02-12345678" } },
-            { "陳工程師", new { name = "陳工程師", department = "技術部", position = "工程師", phone = "02-23456789" } },
-            { "王小明", new { name = "王小明", department = "業務部", position = "業務專員", phone = "0912-345678" } },
-            { "陳美麗", new { name = "陳美麗", department = "人力資源部", position = "人資助理", phone = "0987-654321" } },
-            { "李大偉", new { name = "李大偉", department = "資訊部", position = "工程師", phone = "0955-112233" } }
+            { "張經理", new Employee { Name = "張經理", EmployeeId = "E001", Department = "業務部", DepartmentCode = "SALES", JobLevel = "經理", Supervisor = "總經理", Seniority = 8, IsRemote = false, IsStationed = false, SupervisorApology = false } },
+            { "陳工程師", new Employee { Name = "陳工程師", EmployeeId = "E002", Department = "技術部", DepartmentCode = "TECH", JobLevel = "工程師", Supervisor = "技術經理", Seniority = 5, IsRemote = true, IsStationed = false, SupervisorApology = false } },
+            { "王小明", new Employee { Name = "王小明", EmployeeId = "E003", Department = "業務部", DepartmentCode = "SALES", JobLevel = "業務專員", Supervisor = "張經理", Seniority = 3, IsRemote = false, IsStationed = false, SupervisorApology = false } },
+            { "陳美麗", new Employee { Name = "陳美麗", EmployeeId = "E004", Department = "人力資源部", DepartmentCode = "HR", JobLevel = "人資助理", Supervisor = "人資經理", Seniority = 2, IsRemote = false, IsStationed = false, SupervisorApology = false } },
+            { "李大偉", new Employee { Name = "李大偉", EmployeeId = "E005", Department = "資訊部", DepartmentCode = "IT", JobLevel = "工程師", Supervisor = "資訊經理", Seniority = 6, IsRemote = true, IsStationed = false, SupervisorApology = false } },
+            { "林小芳", new Employee { Name = "林小芳", EmployeeId = "E006", Department = "設計部", DepartmentCode = "DESIGN", JobLevel = "設計師", Supervisor = "設計總監", Seniority = 4, IsRemote = false, IsStationed = true, SupervisorApology = false } }
         };
 
         public static Dictionary<string, int> CityTemperatures { get; } = new()
@@ -40,9 +41,18 @@ namespace day1
 
         public static Dictionary<string, day1.Weather> WeatherData { get; } = new()
         {
-            { "Taipei-2025-10-09", new day1.Weather { City = "Taipei", Date = "2025-10-09", Type = "Sunny" } },
-            { "Kaohsiung-2025-10-09", new day1.Weather { City = "Kaohsiung", Date = "2025-10-09", Type = "Cloudy" } },
-            { "Taichung-2025-10-09", new day1.Weather { City = "Taichung", Date = "2025-10-09", Type = "Rainy" } }
+            // 中文城市名稱
+            { "台北-2025-10-21", new day1.Weather { City = "台北", Date = "2025-10-21", Type = "多雲" } },
+            { "高雄-2025-10-21", new day1.Weather { City = "高雄", Date = "2025-10-21", Type = "晴朗" } },
+            { "台中-2025-10-21", new day1.Weather { City = "台中", Date = "2025-10-21", Type = "小雨" } },
+            { "台南-2025-10-21", new day1.Weather { City = "台南", Date = "2025-10-21", Type = "晴朗" } },
+            { "新竹-2025-10-21", new day1.Weather { City = "新竹", Date = "2025-10-21", Type = "陰天" } },
+            // 英文城市名稱（相容性）
+            { "Taipei-2025-10-21", new day1.Weather { City = "Taipei", Date = "2025-10-21", Type = "Cloudy" } },
+            { "Kaohsiung-2025-10-21", new day1.Weather { City = "Kaohsiung", Date = "2025-10-21", Type = "Sunny" } },
+            { "Taichung-2025-10-21", new day1.Weather { City = "Taichung", Date = "2025-10-21", Type = "Rainy" } },
+            { "Tainan-2025-10-21", new day1.Weather { City = "Tainan", Date = "2025-10-21", Type = "Sunny" } },
+            { "Hsinchu-2025-10-21", new day1.Weather { City = "Hsinchu", Date = "2025-10-21", Type = "Overcast" } }
         };
     }
 }

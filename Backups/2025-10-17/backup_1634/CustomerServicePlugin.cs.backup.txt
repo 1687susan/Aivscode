@@ -1,0 +1,79 @@
+﻿# ================================================
+# 檔案備份資訊
+# ================================================
+# 原始檔案: c:\Users\user\Aivscode\ConsoleApp1\CustomerServicePlugin.cs
+# 備份時間: 2025-10-17 16:34:09
+# 備份原因: 修復檔案結構錯誤前備份
+# 檔案大小: 3215 bytes
+# ================================================
+using System;
+using System.Text.Json;
+using Microsoft.SemanticKernel;
+using System.ComponentModel;
+
+namespace day1
+{
+    public class CustomerServicePlugin
+    {
+        [KernelFunction]
+        [Description("查詢客戶資訊")]
+        public string GetCustomerInfo(
+            [Description("客戶姓名")] string customerName)
+        {
+            if (DataStore.Customers.TryGetValue(customerName, out var customer))
+            {
+                return JsonSerializer.Serialize(customer);
+            }
+            return "查無此客戶資訊";
+        }
+
+            [KernelFunction]
+            [Description("複合條件查詢客戶，可同時依多個欄位篩選並回傳多筆結果")]
+            public string QueryCustomers([Description("客戶查詢條件物件")] CustomerQueryRequest request)
+            {
+                var results = new List<Customer>();
+                foreach (var obj in DataStore.Customers.Values)
+                {
+                    var customer = obj as Customer;
+                    if (customer == null) continue;
+                    bool match = true;
+                    if (request.CustomerNames != null && request.CustomerNames.Length > 0 && !request.CustomerNames.Contains(customer.Name)) match = false;
+                    if (request.CustomerIds != null && request.CustomerIds.Length > 0 && !request.CustomerIds.Contains(customer.Id)) match = false;
+                    if (request.Contacts != null && request.Contacts.Length > 0 && !request.Contacts.Contains(customer.Contact)) match = false;
+                    if (request.Emails != null && request.Emails.Length > 0 && !request.Emails.Contains(customer.Email)) match = false;
+                    if (request.Windows != null && request.Windows.Length > 0 && !request.Windows.Contains(customer.Window)) match = false;
+                    if (match) results.Add(customer);
+                }
+                return results.Count > 0 ? JsonSerializer.Serialize(results) : "查無符合條件的客戶";
+            }
+    }
+}
+
+    public class CustomerQueryRequest
+    {
+        [Description("客戶姓名，可多筆查詢")]
+        public string[]? CustomerNames { get; set; }
+        [Description("客戶編號，可多筆查詢")]
+        public string[]? CustomerIds { get; set; }
+        [Description("聯絡方式，可多筆查詢")]
+        public string[]? Contacts { get; set; }
+        [Description("客戶mail，可多筆查詢")]
+        public string[]? Emails { get; set; }
+        [Description("客戶聯絡人/窗口，可多筆查詢")]
+        public string[]? Windows { get; set; }
+    }
+
+    public class Customer
+    {
+        [Description("客戶編號")]
+        public string Id { get; set; } = string.Empty;
+        [Description("客戶姓名")]
+        public string Name { get; set; } = string.Empty;
+        [Description("聯絡方式")]
+        public string Contact { get; set; } = string.Empty;
+        [Description("客戶mail")]
+        public string Email { get; set; } = string.Empty;
+        [Description("客戶聯絡人/窗口")]
+        public string Window { get; set; } = string.Empty;
+    }
+
