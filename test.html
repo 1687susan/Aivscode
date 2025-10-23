@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent 系統 - 線上測試平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #16213e;
+            padding: 20px;
+            border-right: 2px solid #0f3460;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #0f3460;
+            padding: 15px 20px;
+            border-bottom: 2px solid #16213e;
+        }
+        
+        .terminal {
+            flex: 1;
+            background: #1a1a2e;
+            padding: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+        
+        .input-area {
+            background: #16213e;
+            padding: 15px 20px;
+            border-top: 2px solid #0f3460;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            color: #eee;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            border-radius: 4px;
+        }
+        
+        .input-area button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .input-area button:hover {
+            background: #45a049;
+        }
+        
+        .agent-selector {
+            margin-bottom: 20px;
+        }
+        
+        .agent-selector h3 {
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+        
+        .agent-btn {
+            display: block;
+            width: 100%;
+            background: #0f3460;
+            color: #eee;
+            border: 1px solid #16213e;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .agent-btn:hover {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        
+        .agent-btn.active {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        
+        .status-info {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-info h4 {
+            color: #4caf50;
+            margin-bottom: 8px;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4caf50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .system-output {
+            color: #4caf50;
+        }
+        
+        .user-input {
+            color: #61dafb;
+        }
+        
+        .ai-response {
+            color: #ffd700;
+            margin-left: 20px;
+        }
+        
+        .error {
+            color: #ff6b6b;
+        }
+        
+        .system-info {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .prompt {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .divider {
+            color: #666;
+            margin: 10px 0;
+        }
+        
+        .typing {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .feature-list {
+            font-size: 11px;
+            color: #ccc;
+        }
+        
+        .feature-list ul {
+            margin-left: 15px;
+            margin-top: 5px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 3px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="status-info">
+                <h4><span class="status-dot"></span>系統狀態</h4>
+                <p>版本: v2.3.0</p>
+                <p>狀態: 線上運行</p>
+                <p>模式: 模擬測試</p>
+            </div>
+            
+            <div class="agent-selector">
+                <h3>🤖 選擇 AI Agent</h3>
+                <button class="agent-btn" onclick="selectAgent(1)">1. 客戶服務助手</button>
+                <button class="agent-btn" onclick="selectAgent(2)">2. 天氣服務助手</button>
+                <button class="agent-btn" onclick="selectAgent(3)">3. 人力資源助手</button>
+                <button class="agent-btn" onclick="selectAgent(4)">4. 訂單管理助手</button>
+                <button class="agent-btn" onclick="selectAgent(5)">5. AI 智能助手</button>
+                <button class="agent-btn" onclick="resetSystem()">重置系統</button>
+            </div>
+            
+            <div class="feature-list">
+                <h4>💡 測試建議</h4>
+                <ul>
+                    <li>台北天氣如何？</li>
+                    <li>查詢客戶王小明</li>
+                    <li>顯示員工資料</li>
+                    <li>訂單A001狀態</li>
+                    <li>東京天氣和員工資料</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <h2>🤖 AI Agent 系統 - 線上測試平台 v2.3.0</h2>
+                <p>企業級智能助手系統 | 複合查詢智能支援版</p>
+            </div>
+            
+            <div class="terminal" id="terminal">
+                <div class="system-output">
+🤖 歡迎使用 AI Agent 智能助手系統<br>
+版本：v2.3.0 (複合查詢智能支援版)<br>
+發布日期：2025年10月23日<br>
+<br>
+<span class="system-info">系統初始化完成...</span><br>
+<span class="system-info">載入 Semantic Kernel 框架...</span><br>
+<span class="system-info">初始化 Function Choice Behavior 管理器...</span><br>
+<span class="system-info">載入 SystemPrompts 配置...</span><br>
+<span class="system-info">啟動模擬資料服務...</span><br>
+<br>
+<span class="prompt">請選擇服務類型：</span><br>
+1. 客戶服務助手<br>
+2. 天氣服務助手 (全球升級版)<br>
+3. 人力資源助手<br>
+4. 訂單管理助手<br>
+5. AI 智能助手 (OpenAI Assistant)<br>
+6. 退出程式<br>
+<br>
+<span class="system-info">💡 提示：選擇左側的 Agent 或直接輸入問題開始測試</span><br>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="userInput" placeholder="請輸入您的問題或選擇 Agent..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">發送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAgent = 0;
+        let conversationHistory = [];
+        
+        const agentData = {
+            1: {
+                name: "客戶服務助手",
+                systemPrompt: "🙋‍♀️ 客戶服務助手已啟動！\n我可以協助您查詢客戶資訊、訂單狀態和處理退換貨申請。",
+                responses: {
+                    "客戶": "📋 客戶資訊查詢結果：\n├─ 客戶編號：C001\n├─ 姓名：王小明\n├─ 電話：0912-345-678\n├─ 等級：VIP會員\n└─ 註冊日期：2023-05-15",
+                    "訂單": "📦 訂單狀態查詢：\n├─ 訂單編號：A001\n├─ 客戶：王小明\n├─ 商品：智能手錶 x1\n├─ 金額：NT$ 8,900\n├─ 狀態：已出貨\n└─ 預計送達：明日下午",
+                    "退貨": "🔄 退換貨申請處理：\n├─ 申請編號：R001\n├─ 訂單：A002\n├─ 原因：商品瑕疵\n├─ 狀態：已核准\n└─ 退款將於3-5工作天完成"
+                }
+            },
+            2: {
+                name: "天氣服務助手",
+                systemPrompt: "🌍 天氣服務助手已啟動！\n支援全球城市天氣查詢 (中英文皆可)\n新增功能：複合查詢智能支援",
+                responses: {
+                    "台北": "🌤️ 台北天氣資訊：\n├─ 溫度：25°C\n├─ 濕度：68%\n├─ 風速：12 km/h\n├─ 天氣狀況：多雲\n├─ 能見度：10 km\n├─ 氣壓：1013 hPa\n└─ 日出/日落：06:30/17:45",
+                    "東京": "🌸 東京天氣資訊：\n├─ 溫度：18°C\n├─ 濕度：75%\n├─ 風速：8 km/h\n├─ 天氣狀況：晴朗\n├─ 能見度：15 km\n├─ 氣壓：1018 hPa\n└─ 日出/日落：06:45/16:30",
+                    "紐約": "🗽 紐約天氣資訊：\n├─ 溫度：22°C\n├─ 濕度：80%\n├─ 風速：15 km/h\n├─ 天氣狀況：小雨\n├─ 能見度：8 km\n├─ 氣壓：1008 hPa\n└─ 日出/日落：07:15/18:20",
+                    "倫敦": "🏰 倫敦天氣資訊：\n├─ 溫度：15°C\n├─ 濕度：85%\n├─ 風速：10 km/h\n├─ 天氣狀況：陰天\n├─ 能見度：12 km\n├─ 氣壓：1015 hPa\n└─ 日出/日落：08:00/16:00"
+                }
+            },
+            3: {
+                name: "人力資源助手",
+                systemPrompt: "👥 人力資源助手已啟動！\n我可以協助您搜尋員工資訊和部門管理。",
+                responses: {
+                    "員工": "👥 員工資料查詢結果：\n├─ 張經理 (技術部) - 分機 101\n│  └─ 專長：系統架構、團隊管理\n├─ 王助理 (行政部) - 分機 102\n│  └─ 專長：行政管理、客戶服務\n├─ 李工程師 (開發部) - 分機 103\n│  └─ 專長：後端開發、資料庫設計\n└─ 陳設計師 (設計部) - 分機 104\n   └─ 專長：UI/UX設計、前端開發",
+                    "部門": "🏢 部門資訊：\n├─ 技術部：5人 (張經理)\n├─ 開發部：8人 (李主管)\n├─ 行政部：3人 (王助理)\n├─ 設計部：4人 (陳主任)\n└─ 總計：20人"
+                }
+            },
+            4: {
+                name: "訂單管理助手",
+                systemPrompt: "📦 訂單管理助手已啟動！\n我可以協助您查詢訂單狀態和處理退換貨申請。",
+                responses: {
+                    "訂單": "📊 訂單管理系統：\n├─ 訂單 A001：已出貨 (王小明)\n├─ 訂單 A002：處理中 (李小華)\n├─ 訂單 A003：已送達 (張大明)\n├─ 訂單 A004：待付款 (陳小美)\n└─ 今日新訂單：5筆",
+                    "退換貨": "🔄 退換貨處理系統：\n├─ 申請 R001：已核准 (A002)\n├─ 申請 R002：審核中 (A005)\n├─ 申請 R003：已完成 (A001)\n└─ 待處理申請：2筆",
+                    "統計": "📈 訂單統計：\n├─ 本月訂單：156筆\n├─ 完成率：95.5%\n├─ 退換貨率：2.1%\n└─ 客戶滿意度：4.8/5.0"
+                }
+            },
+            5: {
+                name: "AI 智能助手",
+                systemPrompt: "🤖 AI 智能助手已啟動！\n整合 OpenAI Assistant 功能，支援三大模式：\n• 直接對話模式\n• 智能分析模式  \n• 專業代理人選擇\n\n✨ Function Choice Behavior 已啟用",
+                responses: {
+                    "智能": "🧠 AI 智能分析模式：\n├─ 自動代理人選擇：✅ 啟用\n├─ Function Choice：Smart 策略\n├─ 多模組整合：✅ 支援\n├─ 並行查詢處理：✅ 支援\n└─ MCP 協作模式：✅ 就緒",
+                    "分析": "📊 智能系統分析：\n├─ 系統效能：優秀 (95.2%)\n├─ 回應準確度：98.5%\n├─ 複合查詢成功率：96.8%\n├─ Function Call 成功率：99.1%\n└─ 用戶滿意度：4.9/5.0"
+                }
+            }
+        };
+        
+        function selectAgent(agentNum) {
+            currentAgent = agentNum;
+            
+            // 更新按鈕狀態
+            document.querySelectorAll('.agent-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.agent-btn')[agentNum - 1].classList.add('active');
+            
+            // 顯示 Agent 啟動信息
+            const terminal = document.getElementById('terminal');
+            terminal.innerHTML += `<br><span class="user-input">請輸入選項 (1-6): ${agentNum}</span><br>`;
+            terminal.innerHTML += `<span class="system-output">${agentData[agentNum].systemPrompt}</span><br>`;
+            terminal.innerHTML += `<span class="prompt">您可以開始提問了...</span><br><br>`;
+            
+            terminal.scrollTop = terminal.scrollHeight;
+            document.getElementById('userInput').focus();
+        }
+        
+        function resetSystem() {
+            currentAgent = 0;
+            document.querySelectorAll('.agent-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const terminal = document.getElementById('terminal');
+            terminal.innerHTML = `
+                <div class="system-output">
+🤖 系統重置中...<br>
+<span class="system-info">清理對話歷史...</span><br>
+<span class="system-info">重新載入 AI Agent 系統...</span><br>
+<br>
+🤖 歡迎使用 AI Agent 智能助手系統<br>
+版本：v2.3.0 (複合查詢智能支援版)<br>
+<br>
+<span class="prompt">請選擇服務類型：</span><br>
+1. 客戶服務助手<br>
+2. 天氣服務助手 (全球升級版)<br>
+3. 人力資源助手<br>
+4. 訂單管理助手<br>
+5. AI 智能助手 (OpenAI Assistant)<br>
+6. 退出程式<br>
+<br>
+<span class="system-info">💡 提示：選擇左側的 Agent 或直接輸入問題開始測試</span><br>
+                </div>
+            `;
+            
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            const terminal = document.getElementById('terminal');
+            
+            // 顯示用戶輸入
+            terminal.innerHTML += `<span class="user-input">用戶: ${message}</span><br>`;
+            
+            // 如果沒有選擇 Agent，先選擇智能助手
+            if (currentAgent === 0) {
+                currentAgent = 5;
+                terminal.innerHTML += `<span class="system-info">🤖 自動啟動 AI 智能助手...</span><br>`;
+                terminal.innerHTML += `<span class="system-output">${agentData[5].systemPrompt}</span><br>`;
+            }
+            
+            // 顯示處理中
+            terminal.innerHTML += `<span class="typing">AI Agent 思考中...</span><br>`;
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            // 模擬處理延遲
+            setTimeout(() => {
+                processMessage(message, terminal);
+                input.value = '';
+            }, 1000);
+        }
+        
+        function processMessage(message, terminal) {
+            const agent = agentData[currentAgent];
+            let responses = [];
+            let foundMatch = false;
+            
+            // 檢查複合查詢
+            const keywords = Object.keys(agent.responses);
+            const matchedKeywords = keywords.filter(keyword => 
+                message.toLowerCase().includes(keyword.toLowerCase()) ||
+                message.includes(keyword)
+            );
+            
+            // 特殊處理全局關鍵詞
+            const globalKeywords = {
+                "員工": "👥 員工資料查詢結果：\n├─ 張經理 (技術部) - 分機 101\n├─ 王助理 (行政部) - 分機 102\n├─ 李工程師 (開發部) - 分機 103\n└─ 陳設計師 (設計部) - 分機 104",
+                "台北": "🌤️ 台北天氣：25°C，多雲，濕度68%",
+                "東京": "🌸 東京天氣：18°C，晴朗，濕度75%"
+            };
+            
+            // 檢查全局關鍵詞
+            Object.keys(globalKeywords).forEach(keyword => {
+                if (message.includes(keyword)) {
+                    responses.push(globalKeywords[keyword]);
+                    foundMatch = true;
+                }
+            });
+            
+            // 檢查當前 Agent 的回應
+            matchedKeywords.forEach(keyword => {
+                responses.push(agent.responses[keyword]);
+                foundMatch = true;
+            });
+            
+            // 移除最後一行 (思考中...)
+            const lines = terminal.innerHTML.split('<br>');
+            lines.pop(); // 移除空行
+            lines.pop(); // 移除 "思考中..." 行
+            terminal.innerHTML = lines.join('<br>') + '<br>';
+            
+            if (foundMatch) {
+                if (responses.length > 1) {
+                    // 複合查詢回應
+                    terminal.innerHTML += `<span class="ai-response">🤖 ${agent.name} 回應：<br><br>`;
+                    responses.forEach((response, index) => {
+                        terminal.innerHTML += response.replace(/\n/g, '<br>');
+                        if (index < responses.length - 1) {
+                            terminal.innerHTML += `<br><br><span class="divider">──────────────────────────────────────────────────</span><br><br>`;
+                        }
+                    });
+                    terminal.innerHTML += `<br><br>✅ 複合查詢處理完成！</span><br><br>`;
+                } else {
+                    // 單一查詢回應
+                    terminal.innerHTML += `<span class="ai-response">🤖 ${agent.name} 回應：<br><br>`;
+                    terminal.innerHTML += responses[0].replace(/\n/g, '<br>');
+                    terminal.innerHTML += `</span><br><br>`;
+                }
+            } else {
+                // 預設回應
+                const defaultResponses = {
+                    1: "🙋‍♀️ 我可以協助您查詢客戶資訊、訂單狀態或處理退換貨。請嘗試：「查詢客戶王小明」、「訂單A001狀態」或「申請退貨」",
+                    2: "🌍 我可以查詢全球各大城市的天氣。請嘗試：「台北天氣」、「東京天氣」、「紐約天氣」或「倫敦天氣」",
+                    3: "👥 我可以搜尋員工資訊。請嘗試：「顯示員工資料」、「技術部員工」或「查詢張經理」",
+                    4: "📦 我可以管理訂單和退換貨。請嘗試：「查詢訂單A001」、「訂單統計」或「退換貨狀態」",
+                    5: "🤖 我是智能助手，可以處理複合查詢。請嘗試：「台北天氣和員工資料」、「智能分析」或「系統分析」"
+                };
+                
+                terminal.innerHTML += `<span class="ai-response">🤖 ${agent.name} 回應：<br><br>`;
+                terminal.innerHTML += defaultResponses[currentAgent];
+                terminal.innerHTML += `</span><br><br>`;
+            }
+            
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('userInput').focus();
+            
+            // 添加一些初始提示
+            setTimeout(() => {
+                const terminal = document.getElementById('terminal');
+                terminal.innerHTML += `<span class="system-info">💡 系統提示：您可以嘗試以下測試指令：</span><br>`;
+                terminal.innerHTML += `<span class="system-info">• 單一查詢：「台北天氣如何？」、「顯示員工資料」</span><br>`;
+                terminal.innerHTML += `<span class="system-info">• 複合查詢：「台北天氣和員工資料」、「東京天氣和訂單統計」</span><br>`;
+                terminal.innerHTML += `<span class="system-info">• 智能助手：「智能分析我的業務狀況」</span><br><br>`;
+                terminal.scrollTop = terminal.scrollHeight;
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
