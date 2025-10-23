@@ -1,0 +1,23 @@
+5
+2
+查詢台北、東京、倫敦的天氣狀況
+1
+2
+2
+1
+tokyo weather
+exit
+1
+2
+2
+1
+new york weather
+exit
+1
+2
+2
+1
+天氣概況
+exit
+3
+6

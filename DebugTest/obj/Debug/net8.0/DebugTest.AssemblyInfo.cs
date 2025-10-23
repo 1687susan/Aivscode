@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("ConsoleApp1")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("DebugTest")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d92a8ef5601bf6306f0aa0b45bedf1bbd68c6fcc")]
-[assembly: System.Reflection.AssemblyProductAttribute("ConsoleApp1")]
-[assembly: System.Reflection.AssemblyTitleAttribute("ConsoleApp1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9554ac9f000aa5cefc34b481a12c6c335ddf7a18")]
+[assembly: System.Reflection.AssemblyProductAttribute("DebugTest")]
+[assembly: System.Reflection.AssemblyTitleAttribute("DebugTest")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 
 // 由 MSBuild WriteCodeFragment 類別產生。

@@ -65,19 +65,20 @@ namespace day1
                 }
                 Console.WriteLine();
 
-                // 測試 4：Agent 創建測試（不執行完整流程）
-                Console.WriteLine("🤖 測試 4：Agent 創建測試");
+                // 測試 4：Kernel 創建測試
+                Console.WriteLine("🤖 測試 4：Kernel 創建測試");
                 try
                 {
-                    var customerAgent = new CustomerServiceAgent(config);
-                    var weatherAgent = new WeatherServiceAgent(config);
-                    var hrAgent = new HRManagementAgent(config);
-                    var orderAgent = new OrderManagementAgent(config);
-                    Console.WriteLine("✅ 所有 Agent 創建成功");
+                    var kernel = KernelFactory.CreateKernel();
+                    Console.WriteLine("✅ Kernel 創建成功");
+                    
+                    // 測試系統提示外部引用
+                    Console.WriteLine($"🔗 SystemPrompts.AIScheduler 長度: {SystemPrompts.AIScheduler.Length} 字元");
+                    Console.WriteLine("✅ 外部系統提示引用正常");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Agent 創建失敗: {ex.Message}");
+                    Console.WriteLine($"❌ Kernel 創建失敗: {ex.Message}");
                 }
                 Console.WriteLine();
 

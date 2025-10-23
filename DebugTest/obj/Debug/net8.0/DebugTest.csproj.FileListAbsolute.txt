@@ -1,0 +1,15 @@
+C:\Users\user\Aivscode\DebugTest\bin\Debug\net8.0\DebugTest.exe
+C:\Users\user\Aivscode\DebugTest\bin\Debug\net8.0\DebugTest.deps.json
+C:\Users\user\Aivscode\DebugTest\bin\Debug\net8.0\DebugTest.runtimeconfig.json
+C:\Users\user\Aivscode\DebugTest\bin\Debug\net8.0\DebugTest.dll
+C:\Users\user\Aivscode\DebugTest\bin\Debug\net8.0\DebugTest.pdb
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.AssemblyInfoInputs.cache
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.AssemblyInfo.cs
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.csproj.CoreCompileInputs.cache
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.sourcelink.json
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.dll
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\refint\DebugTest.dll
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.pdb
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\DebugTest.genruntimeconfig.cache
+C:\Users\user\Aivscode\DebugTest\obj\Debug\net8.0\ref\DebugTest.dll
