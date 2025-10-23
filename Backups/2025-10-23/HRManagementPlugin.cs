@@ -1,0 +1,89 @@
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Text.Json;
+using Microsoft.SemanticKernel;
+
+namespace day1
+{
+    public class HRManagementPlugin
+    {
+        [KernelFunction]
+        [Description("複合條件查詢員工，可同時依多個欄位篩選並回傳多筆結果")]
+        public string QueryEmployees([Description("員工查詢條件物件")] EmployeeQueryRequest request)
+        {
+            var results = new List<Employee>();
+            foreach (var obj in DataStore.Employees.Values)
+            {
+                var employee = obj as Employee;
+                if (employee == null) continue;
+                bool match = true;
+                if (request.Names != null && request.Names.Length > 0 && !request.Names.Contains(employee.Name)) match = false;
+                if (request.EmployeeIds != null && request.EmployeeIds.Length > 0 && !request.EmployeeIds.Contains(employee.EmployeeId)) match = false;
+                if (request.Departments != null && request.Departments.Length > 0 && !request.Departments.Contains(employee.Department)) match = false;
+                if (request.DepartmentCodes != null && request.DepartmentCodes.Length > 0 && !request.DepartmentCodes.Contains(employee.DepartmentCode)) match = false;
+                if (request.JobLevels != null && request.JobLevels.Length > 0 && !request.JobLevels.Contains(employee.JobLevel)) match = false;
+                if (request.Supervisors != null && request.Supervisors.Length > 0 && !request.Supervisors.Contains(employee.Supervisor)) match = false;
+                if (request.MinSeniority.HasValue && employee.Seniority < request.MinSeniority.Value) match = false;
+                if (request.MaxSeniority.HasValue && employee.Seniority > request.MaxSeniority.Value) match = false;
+                if (request.IsRemote.HasValue && employee.IsRemote != request.IsRemote.Value) match = false;
+                if (request.IsStationed.HasValue && employee.IsStationed != request.IsStationed.Value) match = false;
+                if (request.SupervisorApology.HasValue && employee.SupervisorApology != request.SupervisorApology.Value) match = false;
+                if (match) results.Add(employee);
+            }
+            return results.Count > 0 ? JsonSerializer.Serialize(results) : "查無符合條件的員工";
+        }
+    }
+
+    public class EmployeeQueryRequest
+    {
+        [Description("員工姓名，可多筆查詢")]
+        public string[]? Names { get; set; }
+        [Description("員工工號，可多筆查詢")]
+        public string[]? EmployeeIds { get; set; }
+        [Description("部門，可多筆查詢")]
+        public string[]? Departments { get; set; }
+        [Description("部門代碼，可多筆查詢")]
+        public string[]? DepartmentCodes { get; set; }
+        [Description("職級，可多筆查詢")]
+        public string[]? JobLevels { get; set; }
+        [Description("部門主管，可多筆查詢")]
+        public string[]? Supervisors { get; set; }
+        [Description("最小工作年資")]
+        public int? MinSeniority { get; set; }
+        [Description("最大工作年資")]
+        public int? MaxSeniority { get; set; }
+        [Description("是否遠端 (true/false)")]
+        public bool? IsRemote { get; set; }
+        [Description("是否派駐 (true/false)")]
+        public bool? IsStationed { get; set; }
+        [Description("主管是否歉 (true/false)")]
+        public bool? SupervisorApology { get; set; }
+    }
+
+    public class Employee
+    {
+        [Description("員工姓名")]
+        public string Name { get; set; } = string.Empty;
+        [Description("員工工號")]
+        public string EmployeeId { get; set; } = string.Empty;
+        [Description("部門")]
+        public string Department { get; set; } = string.Empty;
+        [Description("部門代碼")]
+        public string DepartmentCode { get; set; } = string.Empty;
+        [Description("職級")]
+        public string JobLevel { get; set; } = string.Empty;
+        [Description("部門主管")]
+        public string Supervisor { get; set; } = string.Empty;
+        [Description("工作年資")]
+        public int Seniority { get; set; }
+        [Description("是否遠端")]
+        public bool IsRemote { get; set; }
+        [Description("是否派駐")]
+        public bool IsStationed { get; set; }
+        [Description("主管是否歉")]
+        public bool SupervisorApology { get; set; }
+    }
+
+} // namespace day1

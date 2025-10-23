@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Text.Json;
+using Microsoft.SemanticKernel;
+
+namespace day1
+{
+    public class WeatherServicePlugin
+    {
+        [KernelFunction]
+        [Description("複合條件查詢天氣，可同時依多個欄位篩選並回傳多筆結果")]
+        public string QueryWeather([Description("天氣查詢條件物件")] WeatherQueryRequest request)
+        {
+            var results = new List<Weather>();
+            foreach (var obj in DataStore.WeatherData.Values)
+            {
+                var weather = obj as Weather;
+                if (weather == null) continue;
+                bool match = true;
+                if (request.Cities != null && request.Cities.Length > 0 && !request.Cities.Contains(weather.City)) match = false;
+                if (request.Dates != null && request.Dates.Length > 0 && !request.Dates.Contains(weather.Date)) match = false;
+                if (request.WeatherTypes != null && request.WeatherTypes.Length > 0 && !request.WeatherTypes.Contains(weather.Type)) match = false;
+                if (match) results.Add(weather);
+            }
+            return results.Count > 0 ? JsonSerializer.Serialize(results) : "查無符合條件的天氣資料";
+        }
+    }
+
+    public class WeatherQueryRequest
+    {
+        [Description("城市，可多筆查詢")]
+        public string[]? Cities { get; set; }
+        [Description("日期，可多筆查詢")]
+        public string[]? Dates { get; set; }
+        [Description("天氣類型，可多筆查詢")]
+        public string[]? WeatherTypes { get; set; }
+    }
+
+
+} // namespace day1
+
