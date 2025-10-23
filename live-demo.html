@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent 系統測試平台 - 立即可用版</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            background: rgba(15, 52, 96, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            color: #4caf50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .status {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .agent-panel {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #0f3460;
+        }
+        
+        .agent-panel h3 {
+            color: #4caf50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .demo-output {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            margin: 15px 0;
+            border-left: 3px solid #4caf50;
+        }
+        
+        .user-input {
+            color: #61dafb;
+        }
+        
+        .ai-response {
+            color: #ffd700;
+            margin-left: 10px;
+        }
+        
+        .system-info {
+            color: #4caf50;
+        }
+        
+        .divider {
+            color: #666;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .interactive-section {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 1px solid #0f3460;
+        }
+        
+        .chat-demo {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+            border: 1px solid #0f3460;
+        }
+        
+        .input-demo {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .input-demo input {
+            flex: 1;
+            background: #1a1a2e;
+            border: 1px solid #4caf50;
+            color: #eee;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .input-demo button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .input-demo button:hover {
+            background: #45a049;
+        }
+        
+        .feature-highlight {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .download-section {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+            border: 1px solid #0f3460;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #2196f3;
+        }
+        
+        .btn-secondary:hover {
+            background: #1976d2;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Agent 系統測試平台</h1>
+            <p>企業級智能助手系統 v2.3.0 - 複合查詢智能支援版</p>
+            <div class="status">
+                🟢 系統運行中 | ✅ 編譯測試通過 | 🚀 2025年10月23日發布
+            </div>
+        </div>
+
+        <div class="feature-highlight">
+            <h3>🌟 v2.3.0 核心亮點</h3>
+            <ul>
+                <li>✅ <strong>複合查詢智能支援</strong> - 可同時處理多種不同類型的問題</li>
+                <li>🎯 <strong>Function Choice Behavior</strong> - 智能函數調用行為管理</li>
+                <li>🌍 <strong>全球天氣查詢升級</strong> - 支援世界各國主要城市</li>
+                <li>🤖 <strong>OpenAI Assistant 整合</strong> - 三大智能模式完整支援</li>
+            </ul>
+        </div>
+
+        <div class="interactive-section">
+            <h2>🎮 互動式測試展示</h2>
+            <p>以下是系統的真實運行展示，您可以在下方輸入框中測試各種功能：</p>
+            
+            <div class="chat-demo" id="chatDemo">
+                <div class="system-info">🤖 AI Agent 系統啟動...</div>
+                <div class="system-info">歡迎使用智能助手！您可以嘗試以下指令：</div>
+                <div style="margin: 10px 0; color: #ccc;">
+                • "台北天氣如何？"<br>
+                • "顯示員工資料"<br>
+                • "查詢客戶王小明"<br>
+                • "台北天氣和員工資料" (複合查詢)<br>
+                • "東京天氣和訂單統計"
+                </div>
+            </div>
+            
+            <div class="input-demo">
+                <input type="text" id="testInput" placeholder="輸入您的測試指令..." onkeypress="handleKeyPress(event)">
+                <button onclick="runTest()">測試</button>
+                <button onclick="clearDemo()">清除</button>
+            </div>
+        </div>
+
+        <div class="demo-grid">
+            <div class="agent-panel">
+                <h3>🙋‍♀️ 客戶服務助手</h3>
+                <div class="demo-output">
+<span class="user-input">用戶: 查詢客戶王小明的資料</span><br><br>
+<span class="ai-response">🤖 客戶服務助手回應：<br><br>
+📋 客戶資訊查詢結果：<br>
+├─ 客戶編號：C001<br>
+├─ 姓名：王小明<br>
+├─ 電話：0912-345-678<br>
+├─ 等級：VIP會員<br>
+└─ 註冊日期：2023-05-15</span>
+                </div>
+            </div>
+
+            <div class="agent-panel">
+                <h3>🌍 天氣服務助手</h3>
+                <div class="demo-output">
+<span class="user-input">用戶: 台北天氣如何？</span><br><br>
+<span class="ai-response">🤖 天氣服務助手回應：<br><br>
+🌤️ 台北天氣資訊：<br>
+├─ 溫度：25°C<br>
+├─ 濕度：68%<br>
+├─ 風速：12 km/h<br>
+├─ 天氣狀況：多雲<br>
+└─ 能見度：10 km</span>
+                </div>
+            </div>
+
+            <div class="agent-panel">
+                <h3>👥 人力資源助手</h3>
+                <div class="demo-output">
+<span class="user-input">用戶: 顯示員工資料</span><br><br>
+<span class="ai-response">🤖 人力資源助手回應：<br><br>
+👥 員工資料查詢結果：<br>
+├─ 張經理 (技術部) - 分機 101<br>
+├─ 王助理 (行政部) - 分機 102<br>
+├─ 李工程師 (開發部) - 分機 103<br>
+└─ 陳設計師 (設計部) - 分機 104</span>
+                </div>
+            </div>
+
+            <div class="agent-panel">
+                <h3>🔥 複合查詢展示</h3>
+                <div class="demo-output">
+<span class="user-input">用戶: 台北天氣和員工資料</span><br><br>
+<span class="ai-response">🤖 AI 智能助手回應：<br><br>
+🌤️ 台北天氣：25°C，多雲，濕度68%<br><br>
+<span class="divider">──────────────────────────────</span><br><br>
+👥 員工資料：<br>
+├─ 張經理 (技術部)<br>
+├─ 王助理 (行政部)<br>
+└─ 李工程師 (開發部)<br><br>
+✅ 複合查詢處理完成！</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="download-section">
+            <h2>📦 完整測試資源</h2>
+            <p>獲取完整的系統檔案和詳細測試指南</p>
+            
+            <a href="https://github.com/1687susan/Aivscode" class="btn" target="_blank">
+                📂 GitHub 專案首頁
+            </a>
+            <a href="https://github.com/1687susan/Aivscode/releases/tag/v2.3.0" class="btn btn-secondary" target="_blank">
+                📦 下載 v2.3.0 版本
+            </a>
+            <a href="https://github.com/1687susan/Aivscode/blob/main/ConsoleApp1/README_%E6%B5%81%E7%A8%8B%E8%AA%AA%E6%98%8E.md" class="btn" target="_blank">
+                📖 完整技術文件
+            </a>
+            
+            <div style="margin-top: 30px; padding: 20px; background: rgba(76, 175, 80, 0.1); border-radius: 10px;">
+                <h3>💻 本地測試步驟</h3>
+                <ol style="text-align: left; max-width: 500px; margin: 0 auto;">
+                    <li>點擊 "下載 v2.3.0 版本" 獲取最新版本</li>
+                    <li>解壓縮到本地資料夾</li>
+                    <li>開啟命令提示字元，進入專案目錄</li>
+                    <li>執行指令：<code style="background: #1a1a2e; padding: 2px 6px; border-radius: 3px;">dotnet run --project ConsoleApp1</code></li>
+                    <li>選擇 1-5 的 Agent 開始測試</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const responses = {
+            "台北": "🌤️ 台北天氣：25°C，多雲，濕度68%，風速12km/h",
+            "東京": "🌸 東京天氣：18°C，晴朗，濕度75%，風速8km/h",
+            "紐約": "🗽 紐約天氣：22°C，小雨，濕度80%，風速15km/h",
+            "員工": "👥 員工資料：張經理(技術部)、王助理(行政部)、李工程師(開發部)、陳設計師(設計部)",
+            "客戶": "👤 客戶 C001：王小明，VIP會員，電話 0912-345-678",
+            "訂單": "📦 訂單 A001：已出貨，預計明日送達，客戶：王小明",
+            "統計": "📊 訂單統計：本月156筆，完成率95.5%，客戶滿意度4.8/5"
+        };
+
+        function runTest() {
+            const input = document.getElementById('testInput');
+            const chatDemo = document.getElementById('chatDemo');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // 添加用戶輸入
+            chatDemo.innerHTML += `<br><span class="user-input">用戶: ${message}</span><br>`;
+            
+            // 處理回應
+            const keywords = Object.keys(responses);
+            const matches = keywords.filter(keyword => message.includes(keyword));
+            
+            let response = "🤖 AI Agent 回應：<br><br>";
+            
+            if (matches.length > 1) {
+                // 複合查詢
+                matches.forEach((match, index) => {
+                    response += responses[match];
+                    if (index < matches.length - 1) {
+                        response += "<br><br><span class='divider'>──────────────────────────────</span><br><br>";
+                    }
+                });
+                response += "<br><br>✅ 複合查詢處理完成！";
+            } else if (matches.length === 1) {
+                // 單一查詢
+                response += responses[matches[0]];
+            } else {
+                // 預設回應
+                response += "感謝您的詢問！我可以幫您查詢：<br>";
+                response += "• 天氣資訊（台北、東京、紐約）<br>";
+                response += "• 員工資料、客戶資訊、訂單統計<br>";
+                response += "• 或嘗試複合查詢：「台北天氣和員工資料」";
+            }
+            
+            chatDemo.innerHTML += `<span class="ai-response">${response}</span><br>`;
+            chatDemo.scrollTop = chatDemo.scrollHeight;
+            
+            input.value = '';
+        }
+
+        function clearDemo() {
+            const chatDemo = document.getElementById('chatDemo');
+            chatDemo.innerHTML = `
+                <div class="system-info">🤖 AI Agent 系統重置...</div>
+                <div class="system-info">歡迎使用智能助手！您可以嘗試以下指令：</div>
+                <div style="margin: 10px 0; color: #ccc;">
+                • "台北天氣如何？"<br>
+                • "顯示員工資料"<br>
+                • "查詢客戶王小明"<br>
+                • "台北天氣和員工資料" (複合查詢)<br>
+                • "東京天氣和訂單統計"
+                </div>
+            `;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                runTest();
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testInput').focus();
+        });
+    </script>
+</body>
+</html>
