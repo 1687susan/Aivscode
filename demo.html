@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent 系統展示 - 快速預覽</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .demo-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .terminal {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .links {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Agent 系統 v2.3.0</h1>
+        
+        <div class="status">
+            <h3>✅ 系統狀態</h3>
+            <p><strong>版本：</strong>v2.3.0 複合查詢智能支援版</p>
+            <p><strong>測試狀態：</strong>編譯通過 ✅ | 功能測試通過 ✅</p>
+            <p><strong>發布日期：</strong>2025年10月23日</p>
+        </div>
+
+        <div class="demo-box">
+            <h3>🎯 核心功能展示</h3>
+            <div class="terminal">
+AI Agent 系統啟動中...<br>
+選擇服務：2 (天氣服務助手)<br>
+<br>
+用戶輸入：台北天氣如何？<br>
+🌤️ 系統回應：<br>
+├─ 溫度：25°C<br>
+├─ 濕度：68%<br>
+├─ 風速：12 km/h<br>
+└─ 天氣：多雲<br>
+<br>
+用戶輸入：顯示員工資料和東京天氣<br>
+📋 員工資料：<br>
+├─ 張經理 (技術部)<br>
+└─ 王助理 (行政部)<br>
+──────────────────<br>
+🌸 東京天氣：18°C，晴朗<br>
+✅ 複合查詢處理完成！
+            </div>
+        </div>
+
+        <div class="demo-box">
+            <h3>🚀 主要特色</h3>
+            <ul>
+                <li>🙋‍♀️ <strong>客戶服務助手</strong> - 智能客戶資訊與訂單管理</li>
+                <li>🌍 <strong>全球天氣服務</strong> - 支援各國主要城市查詢</li>
+                <li>👥 <strong>人力資源管理</strong> - 員工資料搜尋系統</li>
+                <li>📦 <strong>訂單管理系統</strong> - 完整訂單生命週期管理</li>
+                <li>🤖 <strong>OpenAI Assistant</strong> - 三大智能模式整合</li>
+            </ul>
+        </div>
+
+        <div class="demo-box">
+            <h3>⭐ v2.3.0 新功能</h3>
+            <ul>
+                <li>✅ <strong>複合查詢智能支援</strong> - 可同時處理多種問題</li>
+                <li>🎯 <strong>Function Choice Behavior</strong> - 智能函數調用管理</li>
+                <li>🌐 <strong>全球天氣升級</strong> - 支援更多國際城市</li>
+                <li>⚙️ <strong>系統穩定性提升</strong> - 完整錯誤處理機制</li>
+            </ul>
+        </div>
+
+        <div class="links">
+            <h3>🔗 完整資源連結</h3>
+            <a href="https://github.com/1687susan/Aivscode" class="btn" target="_blank">
+                📂 GitHub 專案
+            </a>
+            <a href="https://github.com/1687susan/Aivscode/releases/tag/v2.3.0" class="btn" target="_blank">
+                📦 下載測試版
+            </a>
+            <a href="https://github.com/1687susan/Aivscode/blob/main/ConsoleApp1/README_%E6%B5%81%E7%A8%8B%E8%AA%AA%E6%98%8E.md" class="btn" target="_blank">
+                📖 技術文件
+            </a>
+        </div>
+
+        <div class="demo-box">
+            <h3>💻 本地測試步驟</h3>
+            <ol>
+                <li>下載專案：點擊上方「下載測試版」</li>
+                <li>解壓檔案到本地目錄</li>
+                <li>開啟命令提示字元，進入專案目錄</li>
+                <li>執行：<code>dotnet run --project ConsoleApp1</code></li>
+                <li>選擇對應的 Agent 進行功能測試</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
